@@ -1,10 +1,8 @@
-from model.types import Detections
-'''
+"""
+Perform inference on neural network models or geometric vision algorithms here
+"""
 
-Interface with neural network inference
-
-'''
-
-# TODO: mannikin detection model inference
 def detect_mannikins(img):
+    """TODO: mannikin detection model inference"""
+    print(img.shape)
     return []

@@ -1,40 +1,51 @@
-from flask import Flask, Response, request, jsonify
-from model.drone import Drone
-from odlc.detector import Detector
+"""
+Driver file for SUAS Vision subsystem server
+"""
+
 from datetime import date
-import cv2
 import os
 
-'''
+from flask import Flask, Response, request, jsonify
+import cv2
 
-Driver file for SUAS Vision subsystem server
+from model.drone import Drone
+from odlc.detector import Detector
 
-'''
 
-app = Flask(__name__)
+
+app = Flask(__name__)             # pylint: disable=invalid-name
 FILE_PATH = './images/'
 
-_drone = Drone()
-_detector = Detector()
+_drone = Drone()                  # pylint: disable=invalid-name
+_detector = Detector()            # pylint: disable=invalid-name
 
-# Hello world default request
-# TODO: remove this once enough people are onboarded
+
 @app.route('/')
 @app.route('/index')
 def index():
+    """
+    Hello world default request
+    TODO: remove this once enough people are onboarded
+    """
     return 'Hello world!\n'
 
-# Get most certain object detections
+
 @app.route('/odlc', methods=['GET'])
 def get_best_object_detections():
+    """
+    Get most certain object detections
+    """
     top_detections = _detector.get_top_detections()
     json_detections = jsonify()
     print(top_detections)
     return json_detections
 
-# Queue image POST request
+
 @app.route('/odlc', methods=['POST'])
 def queue_image_for_odlc():
+    """
+    Queue image POST request
+    """
     # Save file locally, so we can process it using OpenCV
     raw_data = request.get_data()
     date_str = date.today().strftime("%d-%m-%y-%h-%m-%s")
@@ -46,25 +57,30 @@ def queue_image_for_odlc():
     try:
         img = cv2.imread(file_location, cv2.IMREAD_UNCHANGED)
         _detector.process_queued_image(img)
-    except Exception as e:
-        print(e)
+    except Exception as exc: # pylint: disable=broad-except
+        print(repr(exc))
+        if os.environ.get('DEBUG'):
+            return 'Exception thrown during processing, see server logs', 500
         return 'Invalid file', 400
 
     # Delete file and return
     os.remove(file_location)
-    return Response(status = 200)
+    return Response(status=200)
 
-# Update telemetry POST request
+
 @app.route('/telemetry', methods=['POST'])
 def update_telemetry():
+    """
+    Update telemetry POST request
+    """
     # Push updates to drone telemetry
     # If any info is missing, throw an error
     try:
         _drone.update_telemetry(request.json)
         print(request.json)
-    except Exception as e:
-        print(e)
+    except KeyError as exc:
+        print(repr(exc))
         return 'Badly formed telemetry update', 400
 
     # Return empty response for success (check status code for semantics)
-    return Response(status = 200)
+    return Response(status=200)

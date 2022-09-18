@@ -6,7 +6,8 @@ build: ## Build the container
 	docker build -t $(APP_NAME) .
 
 run:
-	docker run -p=$(PORT):$(PORT) --name="$(APP_NAME)" $(APP_NAME)
+	docker run -p=$(PORT):$(PORT) --env-file env.txt \
+		--name="$(APP_NAME)" $(APP_NAME)
 
 kill:
 	./kill.sh $(APP_NAME)

@@ -50,18 +50,18 @@ def queue_image_for_odlc():
     raw_data = request.get_data()
     date_str = date.today().strftime("%d-%m-%y-%h-%m-%s")
     file_location = f'{FILE_PATH}/{date_str}'
-    file = open(file_location, 'wb')
-    file.write(raw_data)
+    with open(file_location, 'wb') as file:
+        file.write(raw_data)
 
-    # Load file and process
-    try:
-        img = cv2.imread(file_location, cv2.IMREAD_UNCHANGED)
-        _detector.process_queued_image(img)
-    except Exception as exc: # pylint: disable=broad-except
-        print(repr(exc))
-        if os.environ.get('DEBUG'):
-            return 'Exception thrown during processing, see server logs', 500
-        return 'Invalid file', 400
+        # Load file and process
+        try:
+            img = cv2.imread(file_location, cv2.IMREAD_UNCHANGED)
+            _detector.process_queued_image(img)
+        except Exception as exc: # pylint: disable=broad-except
+            print(repr(exc))
+            if os.environ.get('DEBUG'):
+                return 'Exception thrown during processing, see server logs', 500
+            return 'Invalid file', 400
 
     # Delete file and return
     os.remove(file_location)

@@ -22,4 +22,5 @@ jobs:
     - name: Analysing the code with pylint
       run: |
         pylint --generate-rcfile > ~/.pylintrc
+        echo 'extension-pkg-whitelist=cv2' > ~/.pylintrc
         pylint $(git ls-files '*.py')

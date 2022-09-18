@@ -21,6 +21,4 @@ jobs:
         pip install -r requirements.txt
     - name: Analysing the code with pylint
       run: |
-        pylint --generate-rcfile > ~/.pylintrc
-        echo 'extension-pkg-whitelist=cv2' > ~/.pylintrc
-        pylint $(git ls-files '*.py')
+        pylint --extension-pkg-whitelist=cv2 $(git ls-files '*.py')

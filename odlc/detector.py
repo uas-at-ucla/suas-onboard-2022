@@ -6,7 +6,7 @@ Stateful representation of vision subsystem
 import os
 import math
 
-import odlc.inference as inference
+from odlc import inference
 
 def get_detection_confidence(detection):
     """

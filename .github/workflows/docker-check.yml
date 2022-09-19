@@ -15,4 +15,12 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+      run: docker build . --file Dockerfile --tag suas-vision:$(date +%s)
+    - name: Run the Docker container
+    - uses: docker/build-push-action@v2
+      with:
+        tags: suas-vision:$(date +%s)
+        push: false
+    - uses: addnab/docker-run-action@v3
+      with:
+        image: suas-vision:$(date +%s)

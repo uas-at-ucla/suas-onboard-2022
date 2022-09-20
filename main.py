@@ -77,9 +77,43 @@ def update_telemetry():
     try:
         _drone.update_telemetry(request.json)
         print(request.json)
-    except KeyError as exc:
+    except Exception as exc:
         print(repr(exc))
         return 'Badly formed telemetry update', 400
+
+    # Return empty response for success (check status code for semantics)
+    return Response(status=200)
+
+@app.route('/targets', methods=['POST'])
+def update_targets():
+    """
+    Update target POST request
+    """
+    # Push updates to drone telemetry
+    # If any info is missing, throw an error
+    try:
+        data_list = request.get_json()
+
+        # Validate data, this will throw an error if anything is off
+        for data in data_list:
+            if data['type'] == 'emergent':
+                assert len(data.keys()) == 1
+            elif data['type'] == 'alphanumeric':
+                assert len(data.keys()) == 2
+                data_class = data['class']
+                assert len(data_class) == 4
+                assert type(data_class['shape-color']) == str
+                assert type(data_class['text-color']) == str
+                assert type(data_class['text']) == str
+                assert type(data_class['shape']) == str
+            else:
+                raise Exception('Type not recognized')
+
+        _detector.update_targets(data_list)
+        print(request.json)
+    except Exception as exc:
+        print(repr(exc))
+        return 'Badly formed target update', 400
 
     # Return empty response for success (check status code for semantics)
     return Response(status=200)

@@ -44,6 +44,11 @@ class Detector:
         self.detections = []
         self.num_detections = int(os.environ.get('NUM_DETECTIONS'))
         self.tolerance = int(os.environ.get('DETECTION_TOLERANCE'))
+        self.expected_targets = []
+
+    def update_targets(self, targets):
+        self.num_detections = len(targets)
+        self.expected_targets = targets
 
     def process_queued_image(self, img):
         """

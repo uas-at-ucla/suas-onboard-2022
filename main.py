@@ -8,15 +8,12 @@ import os
 from flask import Flask, Response, request, jsonify
 import cv2
 
-from model.drone import Drone
-from odlc.detector import Detector
+import model.drone as drone
+import odlc.detector as detector
 
 
 app = Flask(__name__)             # pylint: disable=invalid-name
 FILE_PATH = './images/'
-
-_drone = Drone()                  # pylint: disable=invalid-name
-_detector = Detector()            # pylint: disable=invalid-name
 
 
 @app.route('/')
@@ -34,8 +31,8 @@ def get_best_object_detections():
     """
     Get most certain object detections
     """
-    top_detections = _detector.get_top_detections()
-    json_detections = jsonify()
+    top_detections = detector.get_top_detections()
+    json_detections = jsonify(top_detections)
     print(top_detections)
     return json_detections
 
@@ -55,7 +52,7 @@ def queue_image_for_odlc():
         # Load file and process
         try:
             img = cv2.imread(file_location, cv2.IMREAD_UNCHANGED)
-            _detector.process_queued_image(img)
+            detector.process_queued_image(img)
         except Exception as exc:  # pylint: disable=broad-except
             print(repr(exc))
             if os.environ.get('DEBUG'):
@@ -72,10 +69,11 @@ def update_telemetry():
     """
     Update telemetry POST request
     """
+
     # Push updates to drone telemetry
     # If any info is missing, throw an error
     try:
-        _drone.update_telemetry(request.json)
+        drone.update_telemetry(request.json)
         print(request.json)
     except Exception as exc:
         print(repr(exc))
@@ -84,12 +82,14 @@ def update_telemetry():
     # Return empty response for success (check status code for semantics)
     return Response(status=200)
 
+
 @app.route('/targets', methods=['POST'])
 def update_targets():
     """
     Update target POST request
     """
-    # Push updates to drone telemetry
+
+    # Push updates to drone targets
     # If any info is missing, throw an error
     try:
         data_list = request.get_json()
@@ -109,7 +109,7 @@ def update_targets():
             else:
                 raise Exception('Type not recognized')
 
-        _detector.update_targets(data_list)
+        detector.update_targets(data_list)
         print(request.json)
     except Exception as exc:
         print(repr(exc))

@@ -5,8 +5,14 @@ Stateful representation of vision subsystem
 
 import os
 import math
+import json
+
+import redis
 
 from odlc import inference
+
+r = redis.Redis(host='redis', port=6379, db=0)
+tolerance = int(os.environ.get('DETECTION_TOLERANCE'))
 
 
 def get_detection_confidence(detection):
@@ -35,61 +41,60 @@ def get_detection_diff(d_1, d_2):
     return dist
 
 
-class Detector:
-    """Detector class: stateful methods"""
-    def __init__(self):
-        """
-        Constructor for Detector class
-        """
-        self.detections = []
-        self.num_detections = int(os.environ.get('NUM_DETECTIONS'))
-        self.tolerance = int(os.environ.get('DETECTION_TOLERANCE'))
-        self.expected_targets = []
+def update_targets(targets):
+    r.set('detector/num_detections', len(targets))
+    target_json = json.dumps(targets)
+    r.set('detector/targets', target_json)
+    detection_json = json.dumps([])
+    r.set('detector/detections', detection_json)
 
-    def update_targets(self, targets):
-        self.num_detections = len(targets)
-        self.expected_targets = targets
 
-    def process_queued_image(self, img):
-        """
-        Main routine for image processing
-        """
-        print(img.shape)
+def process_queued_image(img):
+    """
+    Main routine for image processing
+    """
+    detections = json.loads(r.get('detector/detections'))
 
-        # Get emergent detections
-        emergent_detections = inference.detect_mannikins(img)
-        for detection in emergent_detections:
-            # Find most similar existing detection
-            min_diff = float('inf')
-            min_comp = {}
-            for comp in self.detections:
-                diff = get_detection_diff(comp, detection)
-                if diff < min_diff:
-                    min_diff = diff
-                    min_comp = comp
+    # Get emergent detections
+    emergent_detections = inference.detect_mannikins(img)
+    for detection in emergent_detections:
+        # Find most similar existing detection
+        min_diff = float('inf')
+        min_comp = {}
+        for comp in detections:
+            diff = get_detection_diff(comp, detection)
+            if diff < min_diff:
+                min_diff = diff
+                min_comp = comp
 
-            # If they are similar enough, combine detections, otherwise
-            # add the new detection to the detection list
-            if min_diff < self.tolerance:
-                print('Duplicate detected:')
-                print(min_comp)
-                print(detection)
+        # If they are similar enough, combine detections, otherwise
+        # add the new detection to the detection list
+        if min_diff < tolerance:
+            print('Duplicate detected:')
+            print(min_comp)
+            print(detection)
 
-                # What happens when duplicate detected
-                # Update min_comp count, weighted average, stdev, etc.
-            else:
-                print('New detection found')
-                print(detection)
-                self.detections.append(detection)
+            # What happens when duplicate detected
+            # Update min_comp count, weighted average, stdev, etc.
+        else:
+            print('New detection found')
+            print(detection)
+            detections.append(detection)
 
-    def get_top_detections(self):
-        """
-        Returns the top N detections we are most confident in
-        """
-        # If not enough detections, return everything we have so far
-        if len(self.detections) <= self.num_detections:
-            return self.detections
+    json_detections = json.dumps(detections)
+    r.set('detector/detections', json_detections)
 
-        # Sort detections increasing by confidence and return
-        self.detections.sort(key=lambda x: -1.0 * get_detection_confidence(x))
-        return self.detections[0:self.num_detections]
+
+def get_top_detections():
+    """
+    Returns the top N detections we are most confident in
+    """
+    # If not enough detections, return everything we have so far
+    detections = json.loads(r.get('detector/detections'))
+    num_detections = int(r.get('detector/num_detections'))
+    if len(detections) <= num_detections:
+        return detections
+
+    # Sort detections increasing by confidence and return
+    detections.sort(key=lambda x: -1.0 * get_detection_confidence(x))
+    return detections[0:num_detections]

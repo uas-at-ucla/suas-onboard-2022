@@ -2,12 +2,11 @@
 APP_NAME=suas-vision
 PORT=8003
 
-build: ## Build the container
-	docker build -t $(APP_NAME) .
-
 run:
-	docker run -p=$(PORT):$(PORT) --env-file env.txt \
-		--name="$(APP_NAME)" $(APP_NAME)
+	docker compose up -d
+
+restart:
+	docker compose restart
 
 kill:
-	./kill.sh $(APP_NAME)
+	docker compose kill

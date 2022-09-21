@@ -1,0 +1,14 @@
+version: "3.9"
+services:
+  web:
+    build: .
+    environment:
+      - NUM_DETECTIONS=5
+      - DETECTION_TOLERANCE=25
+      - DEBUG=1
+    ports:
+      - "8003:8003"
+    volumes:
+      - .:/app
+  redis:
+    image: "redis:alpine"

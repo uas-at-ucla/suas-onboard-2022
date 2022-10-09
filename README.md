@@ -28,3 +28,30 @@ DUMMY=1
 ```
 
 Note that the dummy server will not validate requests.
+
+## Development Tips
+
+After any change, run make build before running make run to ensure your changes
+are reflected in your docker image.
+
+To execute any commands (particularly the tests), do the following:
+
+```
+docker ps
+```
+
+Find the column reading "container ID" for the image suas-vision-web.
+
+Next run:
+
+```
+docker exec -it [CID] sh
+```
+
+where [CID] is replaced by the container ID.
+
+To run automated tests, run
+
+```
+python3 test.py
+```

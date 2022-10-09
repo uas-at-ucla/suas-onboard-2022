@@ -2,6 +2,9 @@
 APP_NAME=suas-vision
 PORT=8003
 
+build:
+	docker compose build
+
 run:
 	docker compose up -d
 

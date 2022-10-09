@@ -1,4 +1,6 @@
 
+import sys
+
 from odlc import tesseract
 
 success = []
@@ -28,6 +30,10 @@ def main():
     print(f'Passed {len(success)} of {num_tests} tests')
     print(f'Successful tests: {success}')
     print(f'Failed tests: {failure}')
+    if len(failure) == 0:
+        sys.exit(0)
+    else:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

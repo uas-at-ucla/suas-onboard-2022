@@ -34,6 +34,28 @@ def get_matching_text(cropped_img):
     vertical_padding = height // 4  # set horizontal padding
     BLACK = [0, 0, 0]
 
+    # Given that the paper is white, the image we receive contains
+    # a background, a white rectangle (could be rotated),
+    # and the letter. Once we binarize, each non-black pixel
+    # in the background should be made black
+    # Thus, we loop through each pixel in
+    # the image and until we find our first black, we set
+    # every pixel up to that point to black
+    # this leaves us with the desired image with white text
+    # and a black background
+
+    for h in range(0, height):
+        for w in range(0, width):
+            if (image[h][w] != 0):
+                image[h][w] = 0
+            else:
+                break
+        for w in reversed(range(0, width)):
+            if (image[h][w] != 0):
+                image[h][w] = 0
+            else:
+                break
+
     # add black padding with horiz_padding on left, right
     # and vertical_padding on top, bottom
     image = cv2.copyMakeBorder(image, vertical_padding, vertical_padding,
@@ -42,7 +64,6 @@ def get_matching_text(cropped_img):
 
     # recompute width, height of image for later use
     width, height = image.shape[:2]
-
     # Returns coordinates of all white pixels (text pixels)
     locs = np.column_stack(np.where(image > 0))
 
@@ -95,6 +116,10 @@ def get_matching_text(cropped_img):
         image = cv2.warpAffine(image, rotation_matrix_ninety, (width, height),
                                flags=cv2.INTER_CUBIC,
                                borderMode=cv2.BORDER_REPLICATE)
+
+    # make sure output list of tuples is sorted in
+    # decreasing order by confidence
+    output = sorted(output, key=lambda x: x[1], reverse=True)
 
     return output
 

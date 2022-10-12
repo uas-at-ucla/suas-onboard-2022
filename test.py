@@ -19,9 +19,10 @@ def check_result(res, anticipated, name):
 def test_tesseract():
     print('Testing Tesseract OCR integration...')
     det = tesseract.get_matching_text('/app/images/test/tesseract-test1.png')
+    print(det)
     check_result(det[0][0], 'A', 'Tesseract1')
-    # det = tesseract.get_matching_text('/app/images/test/tesseract-test2.png')
-    # check_result(det[0][0], 'A', 'Tesseract2')
+    det = tesseract.get_matching_text('/app/images/test/tesseract-test2.png')
+    check_result(det[0][0], 'A', 'Tesseract2')
     print('Completed Tesseract OCR test')
 
 

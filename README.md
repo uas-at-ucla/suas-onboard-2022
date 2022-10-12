@@ -53,5 +53,5 @@ where [CID] is replaced by the container ID.
 To run automated tests, run
 
 ```
-python3 test.py
+python3 -m unittest
 ```

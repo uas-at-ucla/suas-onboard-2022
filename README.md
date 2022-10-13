@@ -1,5 +1,7 @@
+# suas-onboard
+This repo is the onboard subsystem of the UAS @ UCLA 2023 SUAS competition.
+
 # suas-vision
-This repo is the vision subsystem of the UAS @ UCLA 2023 SUAS competition.
 
 ## Getting Started
 First, ensure you have Docker installed. See the instructions

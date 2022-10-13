@@ -1,7 +1,7 @@
 version: "3.9"
 services:
-  web:
-    build: .
+  vision-web:
+    build: vision
     environment:
       - NUM_DETECTIONS=5
       - DETECTION_TOLERANCE=25
@@ -9,6 +9,6 @@ services:
     ports:
       - "8003:8003"
     volumes:
-      - .:/app
+      - ./vision/.:/app
   redis:
     image: "redis:alpine"

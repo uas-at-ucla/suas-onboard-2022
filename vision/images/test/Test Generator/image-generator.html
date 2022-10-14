@@ -1,0 +1,159 @@
+
+<head>
+
+</head>
+
+<body>
+<div>Test case Generator</div>
+
+<canvas id="canvas"></canvas>
+<br><br>
+<select name="shapes" id="shapes" onchange="drawImage()"></select>
+<select name="colors-back" id="colors-back" onchange="drawImage()"></select>
+<select name="colors-fore" id="colors-fore" onchange="drawImage()"></select>
+<br><br>
+
+<div class="slidecontainer">
+    <div>X</div>
+    <input type="range" min="1" max="100" value="50" class="slider" id="xslide" onchange="drawImage()">
+</div>
+
+<div class="slidecontainer">
+    <div>Y</div>
+    <input type="range" min="1" max="100" value="50" class="slider" id="yslide" onchange="drawImage()">
+</div>
+
+<div class="slidecontainer">
+    <div>Size</div>
+    <input type="range" min="1" max="100" value="50" class="slider" id="sizeslide" onchange="drawImage()">
+</div>
+
+<div class="slidecontainer">
+    <div>Rotation</div>
+    <input type="range" min="0" max="360" value="0" class="slider" id="thetaslide" onchange="drawImage()">
+</div>
+
+<script type="application/javascript">
+    WIDTH = 1800;
+    HEIGHT = 1200;
+
+    // Fill spinners
+    let colors = ['black', 'white', 'gray', 'red', 'blue', 'green', 'yellow', 'purple', 'brown', 'orange'];
+    let shapes = ['circle', 'semicircle', 'quarter-circle', 'triangle', 'square', 'rectangle', 'trapezoid',
+                'pentagon', 'hexagon', 'heptagon', 'octagon', 'star', 'cross'];
+    let shape_selector = document.getElementById('shapes');
+    let colors_1 = document.getElementById('colors-back');
+    let colors_2 = document.getElementById('colors-fore');
+
+    shapes.forEach(element => {
+        let opt = document.createElement('option');
+        opt.value = element;
+        opt.innerHTML = element;
+        shape_selector.appendChild(opt);
+    });
+
+    colors.forEach(element => {
+        let opt = document.createElement('option');
+        opt.value = element;
+        opt.innerHTML = element;
+        colors_1.appendChild(opt);
+
+        let opt2 = document.createElement('option');
+        opt2.value = element;
+        opt2.innerHTML = element;
+        colors_2.appendChild(opt2);
+    });
+
+    // Draw background
+    const image = new Image(WIDTH, HEIGHT);
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    ctx.canvas.width = WIDTH;
+    ctx.canvas.height = HEIGHT;
+    image.onload = drawImageActualSize;
+    image.src = "background.png";
+
+    function drawImageActualSize() {
+        ctx.drawImage(this, 0, 0);
+        ctx.drawImage(this, 0, 0, this.width, this.height);
+    }
+
+    let size = 50;
+    let x = 100;
+    let y = 150;
+    let xRange = [50, WIDTH-50];
+    let yRange = [50, HEIGHT-50];
+    let sizeRange = [1, 1200];
+    updateSliders();
+
+    document.getElementById("xslide").value = x;
+    document.getElementById("yslide").value = y;
+    document.getElementById("sizeslide").value = size;
+    document.getElementById("thetaslide").value = 0;
+
+    function updateSliders() {
+        document.getElementById("xslide").min = xRange[0];
+        document.getElementById("xslide").max = xRange[1];
+        document.getElementById("yslide").min = yRange[0];
+        document.getElementById("yslide").max = yRange[1];
+    }
+
+    function drawImage() {
+        size = parseInt(document.getElementById("sizeslide").value);
+        xRange = [size, WIDTH - size];
+        yRange = [size, HEIGHT - size];
+        updateSliders();
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(image, 0, 0, WIDTH, HEIGHT);
+
+        x = parseInt(document.getElementById("xslide").value);
+        y = parseInt(document.getElementById("yslide").value);
+
+        let selection = document.getElementById("shapes").value;
+        let bcolor = document.getElementById("colors-back").value;
+        let theta = document.getElementById("thetaslide").value / 180 * Math.PI;
+
+        ctx.translate(x, y);
+        ctx.rotate(theta);
+        ctx.translate(-1*x, -1*y);
+        if (selection == 'circle') {
+            ctx.beginPath();
+            ctx.arc(x, y, size, 2 * Math.PI, false);
+        }
+        else if (selection == 'semicircle') {
+            ctx.beginPath();
+            ctx.arc(x, y, size, Math.PI, false);
+            ctx.closePath();
+
+        }
+        else if (selection == 'quarter-circle') {
+            ctx.beginPath();
+            let x1 = parseInt(x) - parseInt(size);
+            let y1 = parseInt(y) + parseInt(size);
+            ctx.arc(x1, y1, size * 2, 3 * Math.PI / 2, false);
+            ctx.lineTo(x1, y1);
+            ctx.closePath();
+
+        }
+        else if (selection == 'triangle') {
+            let h = size / 2;
+            console.log(x + h);
+            console.log(h);
+            console.log(y - h);
+            ctx.beginPath();
+            ctx.moveTo(x, y - h);
+            ctx.lineTo(x + h, y + h);
+            ctx.lineTo(x - h, y + h);
+            ctx.closePath();
+        }
+        ctx.fillStyle = bcolor;
+        ctx.fill();
+
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    }
+
+
+</script>
+</body>

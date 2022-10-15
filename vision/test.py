@@ -2,7 +2,6 @@ import unittest
 
 from odlc import tesseract
 
-
 class TesseractTests(unittest.TestCase):
     image_path_1 = '/app/images/test/tesseract-test1.png'
     image_path_2 = '/app/images/test/tesseract-test2.png'

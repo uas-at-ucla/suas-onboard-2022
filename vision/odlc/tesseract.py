@@ -3,7 +3,6 @@ Light wrapper around Tesseract OCR model
 """
 
 import pytesseract
-import numpy as np
 import cv2
 import os
 from odlc.cropper import crop_image
@@ -69,9 +68,6 @@ def get_matching_text(cropped_img):
     # OpenCV provides a method which returns the minimum area rectangle
     # containing the coordinates. The final element of this Box2D object
     # is the angle of the rectangle, hence we assign that to angle
-
-    
-    
     image = crop_image(image)
     width, height = image.shape[:2]  # get the height and width of the image
     center = (width // 2, height // 2)  # compute the approximate center
@@ -97,12 +93,10 @@ def get_matching_text(cropped_img):
         config_str += '=ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
         data = pytesseract.image_to_data(image, config=config_str,
                                          output_type="data.frame")
-        
         # using pandas, get the row with confidence greater than 0
         letter_row = data[data["conf"] > 0]
         letter_row = letter_row.reset_index()  # reset index of pandas series
         # get the recognized letter and its confidence, add to output list
-        
         if not letter_row.empty:
             letter = letter_row["text"][0]
             confidence = letter_row["conf"][0]

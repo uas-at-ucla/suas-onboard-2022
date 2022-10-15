@@ -33,6 +33,22 @@ pyenv install 3.9.13
 ```
 ## ArduPlane
 ---
+
+### **Using Docker**
+
+(WIP) If you'd like to install this software using Docker, then you can! Just follow the following steps below for your respective machine:
+
+#### **MAC / Linux**
+
+1. Download and install Docker for your respective machine. Link found [here](https://docs.docker.com/get-docker/). 
+2. Once downloaded, clone the following repository in the current folder (i.e. suas-onboard/flight): https://github.com/ggharibian/ardupilot-suas
+3. Run the 
+
+#### **Windows**
+**[WIP]**
+
+### **Using a Virtual Machine / WSL2**
+
 ArduPlane is a version of PX4's simulation software used in order to visualize the drone flying while you work on your code / sub-project. The downside is that **you may only be able to run this on a ubuntu machine (or, in the case of windows, using WSL2 / Cygwin)**. Therefore, either a virtual machine must be installed on your system, or a sub-system os (such as cygwin, wsl2, etc.) must be running on your device in order for you to install this software. Once this is available, follow the following steps to complete the installation.
 
 1. Open your linux terminal (either wsl2, cygwin, or your terminal in your virtual machine)
@@ -77,23 +93,6 @@ export DISPLAY=$(ip route list default | awk '{print $3}'):0
 export LIBGL_ALWAYS_INDIRECT=1
 ```
 Then run XLaunch. While running, simply keep the default settings at all pages except the second-to-last one. Here, make sure to check the **"disable access control"** box. Then, finish the run.
-
-## Clone UAS SUAS-flight-2023 repository
----
-When we write code, we want to
-1. share it with others
-2. keep track of old version of the code
-
-To do this, we use Git, a version control software.
-Through Git, we use a repository to hold the code for a single project.
-
-Clone (download) our flight 2023 repository by doing the following
-```bash
-git clone https://github.com/uas-at-ucla/suas-flight-2023.git
-cd suas-flight-2023
-```
-This will create a *new* folder called suas-flight-2023 and changes directory to it.
-This is where all the development for our flight software will be kept.
 
 ## Python Virtual Environment
 ---

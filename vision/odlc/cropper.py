@@ -46,7 +46,6 @@ def crop_shape(image):
     dilated_image = image
     for _ in range(10):
         dilated_image = binary_dilation(dilated_image)
-        
     # https://stackoverflow.com/questions/41576815/drawing-contours-using-cv2-approxpolydp-in-python
     contours, hierarchy = cv2.findContours(
         dilated_image,
@@ -58,7 +57,7 @@ def crop_shape(image):
     # because cv2.findContours always returns it in
     # a proper hierarchal structure, the target index is always the one
     # two layers deep from root
-    # basic theory explaantion: 
+    # basic theory explaantion:
     # https://stackoverflow.com/questions/11782147/python-opencv-contour-tree-hierarchy-structure
     # TODO: add better exit condition
     PARENT_INDEX = 3

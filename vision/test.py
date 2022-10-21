@@ -15,7 +15,6 @@ class TesseractTests(unittest.TestCase):
     # def test_tesseract_image_2(self):
     #     det = tesseract.get_matching_text(self.image_path_2)
     #     self.assertEqual(det[0][0], "A")
-    
     def test_tesseract_image_3(self):
         det = tesseract.get_matching_text(self.image_path_3)
         self.assertEqual(det[0][0], "A")

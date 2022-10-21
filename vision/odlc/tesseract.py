@@ -5,7 +5,7 @@ Light wrapper around Tesseract OCR model
 import pytesseract
 import cv2
 import os
-from odlc.cropper import crop_image
+from odlc.cropper import crop_shape
 
 # Assumes that the cropped image contains a single alphanumeric character
 # Takes the image, deskews, binarizes, pads image
@@ -30,9 +30,6 @@ def get_matching_text(cropped_img):
     # image since minAreaRect can return negative indices in some cases
 
     width, height = image.shape[:2]  # get height, width of image
-    horiz_padding = width // 4  # set vertical padding
-    vertical_padding = height // 4  # set horizontal padding
-    BLACK = [0, 0, 0]
 
     # Given that the paper is white, the image we receive contains
     # a background, a white rectangle (could be rotated),
@@ -43,32 +40,24 @@ def get_matching_text(cropped_img):
     # every pixel up to that point to black
     # this leaves us with the desired image with white text
     # and a black background
-
     for h in range(0, height):
         for w in range(0, width):
-            if (image[h][w] != 0):
-                image[h][w] = 0
+            if (image[w][h] != 0):
+                image[w][h] = 0
             else:
                 break
-        for w in reversed(range(0, width)):
-            if (image[h][w] != 0):
-                image[h][w] = 0
+        for w in reversed(range(width)):
+            if (image[w][h] != 0):
+                image[w][h] = 0
             else:
                 break
 
-    # add black padding with horiz_padding on left, right
-    # and vertical_padding on top, bottom
-    image = cv2.copyMakeBorder(image, vertical_padding, vertical_padding,
-                               horiz_padding, horiz_padding,
-                               cv2.BORDER_CONSTANT, value=BLACK)
+    image = crop_shape(image)
 
-    # recompute width, height of image for later use
-    width, height = image.shape[:2]
     # Returns coordinates of all white pixels (text pixels)
     # OpenCV provides a method which returns the minimum area rectangle
     # containing the coordinates. The final element of this Box2D object
     # is the angle of the rectangle, hence we assign that to angle
-    image = crop_image(image)
     width, height = image.shape[:2]  # get the height and width of the image
     center = (width // 2, height // 2)  # compute the approximate center
     # After image is rotated, there are 4 cases: text is right side up

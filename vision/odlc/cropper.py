@@ -25,7 +25,7 @@ def crop_rotated_bbox(image, center, size, angle, scale=1):
     return cropped_image
 
 
-def crop_image(image):
+def crop_image_alpha(image):
     dilated_image = binary_dilation(image)
     contours, _ = cv2.findContours(
         dilated_image,
@@ -37,4 +37,65 @@ def crop_image(image):
     cv2.drawContours(dilated_image, [box], 0, (36, 255, 12), 3)
     center, size, angle = bounding_rectangle[:3]
     cropped_image = crop_rotated_bbox(image, center, size, angle)
+    # if(os.envrion.get("DEBUG")):
     return cropped_image
+
+
+# returns the largest detected shape, removing noise, etc
+def crop_shape(image):
+    dilated_image = image
+    for _ in range(10):
+        dilated_image = binary_dilation(dilated_image)
+        
+    # https://stackoverflow.com/questions/41576815/drawing-contours-using-cv2-approxpolydp-in-python
+    contours, hierarchy = cv2.findContours(
+        dilated_image,
+        cv2.RETR_TREE,
+        cv2.CHAIN_APPROX_NONE
+    )
+
+    # use cv2 hierarchy structure
+    # because cv2.findContours always returns it in
+    # a proper hierarchal structure, the target index is always the one
+    # two layers deep from root
+    # basic theory explaantion: 
+    # https://stackoverflow.com/questions/11782147/python-opencv-contour-tree-hierarchy-structure
+    # TODO: add better exit condition
+    PARENT_INDEX = 3
+    target_index = -1
+    hierarchy = hierarchy[0]
+    for index, object in enumerate(hierarchy):
+        # check the first and then the second parent
+        object_parent = object[PARENT_INDEX]
+        if object_parent != -1:
+            # check grand parent
+            grand_parent = hierarchy[object_parent][PARENT_INDEX]
+            if grand_parent != -1:
+                target_index = index
+                break
+    # TODO: write test case if target index = -1
+    target_contour = contours[target_index]
+    epsilon = 0.1*cv2.arcLength(target_contour, True)
+    approximated_contour = cv2.approxPolyDP(target_contour, epsilon, True)
+    x, y, h, w = cv2.boundingRect(approximated_contour)
+
+    # TODO: redo padding to initial crop
+    horizontal_padding = w // 4
+    vertical_padding = h // 4
+
+    # this image is undilated
+    cropped_image = image[y:y+h, x:x+w]
+
+    # add padding
+    cropped_image = cv2.copyMakeBorder(
+        cropped_image,
+        vertical_padding,
+        vertical_padding,
+        horizontal_padding,
+        horizontal_padding,
+        cv2.BORDER_CONSTANT,
+        value=[0, 0, 0])
+
+    final_image = crop_image_alpha(cropped_image)
+
+    return final_image

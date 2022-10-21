@@ -73,7 +73,6 @@ def get_matching_text(cropped_img):
         letter = letter_row["text"][0]
         confidence = letter_row["conf"][0]
         output.append((letter, confidence))
-    
     else:
         image = crop_shape(image)
 
@@ -81,13 +80,12 @@ def get_matching_text(cropped_img):
         # OpenCV provides a method which returns the minimum area rectangle
         # containing the coordinates. The final element of this Box2D object
         # is the angle of the rectangle, hence we assign that to angle
-        width, height = image.shape[:2]  # get the height and width of the image
+        # get the height and width of the image
+        width, height = image.shape[:2]
         center = (width // 2, height // 2)  # compute the approximate center
         # After image is rotated, there are 4 cases: text is right side up
         # text is rotated 90 degrees, 180 degrees, or 270 degrees
         rotation_matrix_ninety = cv2.getRotationMatrix2D(center, 90, 1.0)
-
-        
 
         # Save the preprocessed image if we are debugging
         if os.getenv('DEBUG'):
@@ -103,11 +101,15 @@ def get_matching_text(cropped_img):
             # we are interested in the recognized letter and its confidence
             config_str = '--psm 10 -c tessedit_char_whitelist'
             config_str += '=ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
-            data = pytesseract.image_to_data(image, config=config_str,
-                                            output_type="data.frame")
+            data = pytesseract.image_to_data(
+                image,
+                config=config_str,
+                output_type="data.frame"
+            )
             # using pandas, get the row with confidence greater than 0
             letter_row = data[data["conf"] > 0]
-            letter_row = letter_row.reset_index()  # reset index of pandas series
+            # reset index of pandas series
+            letter_row = letter_row.reset_index()
             # get the recognized letter and its confidence, add to output list
             if not letter_row.empty:
                 letter = letter_row["text"][0]
@@ -115,9 +117,12 @@ def get_matching_text(cropped_img):
                 output.append((letter, confidence))
 
             # rotate image by 90 degrees for next pass
-            image = cv2.warpAffine(image, rotation_matrix_ninety, (width, height),
-                                flags=cv2.INTER_CUBIC,
-                                borderMode=cv2.BORDER_REPLICATE)
+            image = cv2.warpAffine(
+                image,
+                rotation_matrix_ninety,
+                (width, height),
+                flags=cv2.INTER_CUBIC,
+                borderMode=cv2.BORDER_REPLICATE)
 
         # make sure output list of tuples is sorted in
         # decreasing order by confidence

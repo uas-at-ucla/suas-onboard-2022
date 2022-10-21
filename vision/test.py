@@ -25,5 +25,6 @@ class TesseractTests(unittest.TestCase):
         det = tesseract.get_matching_text(self.image_path_4)
         self.assertEqual(det[0][0], "A")
 
+
 if __name__ == "__main__":
     unittest.main()

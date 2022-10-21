@@ -56,76 +56,96 @@ def get_matching_text(cropped_img):
     # then the hierachal contour selection isn't needed
     config_str = '--psm 10 -c tessedit_char_whitelist'
     config_str += '=ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
-
     good_crop = crop_image_alpha(image)
-    data = pytesseract.image_to_data(
-        good_crop,
-        config=config_str,
-        output_type="data.frame"
-    )
-    # using pandas, get the row with confidence greater than 0
-    letter_row = data[data["conf"] > 0]
-    letter_row = letter_row.reset_index()  # reset index of pandas series
-    # get the recognized letter and its confidence, add to output list
+
+    width, height = good_crop.shape[:2]
+    center = (width // 2, height // 2)  # compute the approximate center
+    # After image is rotated, there are 4 cases: text is right side up
+    # text is rotated 90 degrees, 180 degrees, or 270 degrees
+
+    rotation_matrix_ninety = cv2.getRotationMatrix2D(center, 90, 1.0)
     output = []
 
-    if not letter_row.empty:
-        letter = letter_row["text"][0]
-        confidence = letter_row["conf"][0]
-        output.append((letter, confidence))
-    else:
-        image = crop_shape(image)
+    for _ in range(0, 4):
 
-        # Returns coordinates of all white pixels (text pixels)
-        # OpenCV provides a method which returns the minimum area rectangle
-        # containing the coordinates. The final element of this Box2D object
-        # is the angle of the rectangle, hence we assign that to angle
-        # get the height and width of the image
-        width, height = image.shape[:2]
-        center = (width // 2, height // 2)  # compute the approximate center
-        # After image is rotated, there are 4 cases: text is right side up
-        # text is rotated 90 degrees, 180 degrees, or 270 degrees
-        rotation_matrix_ninety = cv2.getRotationMatrix2D(center, 90, 1.0)
+        # get tesseract data from the image
+        # we are interested in the recognized letter and its confidence
+        config_str = '--psm 10 -c tessedit_char_whitelist'
+        config_str += '=ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
+        data = pytesseract.image_to_data(
+            good_crop,
+            config=config_str,
+            output_type="data.frame"
+        )
+        # using pandas, get the row with confidence greater than 0
+        letter_row = data[data["conf"] > 0]
+        # reset index of pandas series
+        letter_row = letter_row.reset_index()
+        # get the recognized letter and its confidence, add to output list
+        if not letter_row.empty:
+            letter = letter_row["text"][0]
+            confidence = letter_row["conf"][0]
+            output.append((letter, confidence))
 
-        # Save the preprocessed image if we are debugging
-        if os.getenv('DEBUG'):
-            cv2.imwrite('./img.png', image)
+        # rotate image by 90 degrees for next pass
+        good_crop = cv2.warpAffine(
+            good_crop,
+            rotation_matrix_ninety,
+            (width, height),
+            flags=cv2.INTER_CUBIC,
+            borderMode=cv2.BORDER_REPLICATE)
+    # TODO: do the other one based on confidence instead
+    image = crop_shape(image)
 
-        image = 255 - image
+    # Returns coordinates of all white pixels (text pixels)
+    # OpenCV provides a method which returns the minimum area rectangle
+    # containing the coordinates. The final element of this Box2D object
+    # is the angle of the rectangle, hence we assign that to angle
+    # get the height and width of the image
+    width, height = image.shape[:2]
+    center = (width // 2, height // 2)  # compute the approximate center
+    # After image is rotated, there are 4 cases: text is right side up
+    # text is rotated 90 degrees, 180 degrees, or 270 degrees
 
-        # we check if a letter is detected in every case (right way up, upside
-        # down, 90 degrees left, 90 degrees right)
-        for i in range(0, 4):
+    rotation_matrix_ninety = cv2.getRotationMatrix2D(center, 90, 1.0)
 
-            # get tesseract data from the image
-            # we are interested in the recognized letter and its confidence
-            config_str = '--psm 10 -c tessedit_char_whitelist'
-            config_str += '=ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
-            data = pytesseract.image_to_data(
-                image,
-                config=config_str,
-                output_type="data.frame"
-            )
-            # using pandas, get the row with confidence greater than 0
-            letter_row = data[data["conf"] > 0]
-            # reset index of pandas series
-            letter_row = letter_row.reset_index()
-            # get the recognized letter and its confidence, add to output list
-            if not letter_row.empty:
-                letter = letter_row["text"][0]
-                confidence = letter_row["conf"][0]
-                output.append((letter, confidence))
+    # Save the preprocessed image if we are debugging
+    if os.getenv('DEBUG'):
+        cv2.imwrite('./img.png', image)
 
-            # rotate image by 90 degrees for next pass
-            image = cv2.warpAffine(
-                image,
-                rotation_matrix_ninety,
-                (width, height),
-                flags=cv2.INTER_CUBIC,
-                borderMode=cv2.BORDER_REPLICATE)
+    # we check if a letter is detected in every case (right way up, upside
+    # down, 90 degrees left, 90 degrees right)
+    for i in range(0, 4):
 
-        # make sure output list of tuples is sorted in
-        # decreasing order by confidence
+        # get tesseract data from the image
+        # we are interested in the recognized letter and its confidence
+        config_str = '--psm 10 -c tessedit_char_whitelist'
+        config_str += '=ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
+        data = pytesseract.image_to_data(
+            image,
+            config=config_str,
+            output_type="data.frame"
+        )
+        # using pandas, get the row with confidence greater than 0
+        letter_row = data[data["conf"] > 0]
+        # reset index of pandas series
+        letter_row = letter_row.reset_index()
+        # get the recognized letter and its confidence, add to output list
+        if not letter_row.empty:
+            letter = letter_row["text"][0]
+            confidence = letter_row["conf"][0]
+            output.append((letter, confidence))
+
+        # rotate image by 90 degrees for next pass
+        image = cv2.warpAffine(
+            image,
+            rotation_matrix_ninety,
+            (width, height),
+            flags=cv2.INTER_CUBIC,
+            borderMode=cv2.BORDER_REPLICATE)
+
+    # make sure output list of tuples is sorted in
+    # decreasing order by confidence
     output = sorted(output, key=lambda x: x[1], reverse=True)
 
     return output

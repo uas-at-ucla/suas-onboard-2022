@@ -26,25 +26,29 @@ def crop_rotated_bbox(image, center, size, angle, scale=1):
 
 
 def crop_image_alpha(image):
-    dilated_image = binary_dilation(image)
+    dilated_image = image
+    for _ in range(2):
+        dilated_image = binary_dilation(dilated_image)
     contours, _ = cv2.findContours(
         dilated_image,
         cv2.RETR_EXTERNAL,
-        cv2.CHAIN_APPROX_SIMPLE)
-    bounding_rectangle = cv2.minAreaRect(contours[0])
-    box = cv2.boxPoints(bounding_rectangle)
-    box = np.int0(box)
-    cv2.drawContours(dilated_image, [box], 0, (36, 255, 12), 3)
+        cv2.CHAIN_APPROX_NONE)
+    if len(contours) == 0:
+        return image
+    # select the target contour based on largest contour
+    contour_areas = [cv2.contourArea(x) for x in contours]
+    target_index = contour_areas.index(max(contour_areas))
+
+    bounding_rectangle = cv2.minAreaRect(contours[target_index])
     center, size, angle = bounding_rectangle[:3]
     cropped_image = crop_rotated_bbox(image, center, size, angle)
-    # if(os.envrion.get("DEBUG")):
     return cropped_image
 
 
 # returns the largest detected shape, removing noise, etc
 def crop_shape(image):
     dilated_image = image
-    for _ in range(10):
+    for _ in range(5):
         dilated_image = binary_dilation(dilated_image)
     # https://stackoverflow.com/questions/41576815/drawing-contours-using-cv2-approxpolydp-in-python
     contours, hierarchy = cv2.findContours(

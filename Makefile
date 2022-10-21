@@ -16,4 +16,4 @@ kill:
 
 test:
 	docker compose build && docker compose up -d && \
-		docker exec suas-vision-web-1 python3 -m unittest
+		docker exec suas-onboard-vision-web-1 python3 -m unittest

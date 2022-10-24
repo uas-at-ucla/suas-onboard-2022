@@ -2,10 +2,13 @@ import os
 import cv2
 import numpy as np
 
+PARENT_INDEX = 3
+
 
 def binary_dilation(image):
     # https://github.com/danvk/oldnyc/blob/master/ocr/tess/crop_morphology.py
     kernal_size = int(os.environ.get("DILATION_KERNAL_SIZE"))
+    # n x n full kernal
     kernal = np.ones((kernal_size, kernal_size), np.uint8)
     dilated_image = image
     """TODO: change repeated dilating an image, ALSO CHANGE MAGIC NUMBER"""
@@ -18,11 +21,31 @@ def crop_rotated_bbox(image, center, size, angle, scale=1):
     # https://jdhao.github.io/2019/02/23/crop_rotated_rectangle_opencv/
     size = (int(size[0]), int(size[1]))
     center = (int(center[0]), int(center[1]))
-    width, height = image.shape[0], image.shape[1]
+    cropped_image = cv2.getRectSubPix(image, size, center)
+
+    width, height = cropped_image.shape[:2]
+    # add padding
+    cropped_image = cv2.copyMakeBorder(
+        cropped_image,
+        height//4,
+        height//4,
+        width//4,
+        width//4,
+        cv2.BORDER_CONSTANT
+    )
+
+    center = (cropped_image.shape[0]//2, cropped_image.shape[1]//2)
+    width, height = cropped_image.shape[:2]
+
+    # rotate cropped images
     rotation_matrix = cv2.getRotationMatrix2D(center, angle, scale)
-    rotated_image = cv2.warpAffine(image, rotation_matrix, (width, height))
-    cropped_image = cv2.getRectSubPix(rotated_image, size, center)
-    return cropped_image
+    rotated_image = cv2.warpAffine(
+        cropped_image,
+        rotation_matrix,
+        (width, height)
+    )
+
+    return rotated_image
 
 
 def crop_image_alpha(image):
@@ -42,63 +65,48 @@ def crop_image_alpha(image):
     bounding_rectangle = cv2.minAreaRect(contours[target_index])
     center, size, angle = bounding_rectangle[:3]
     cropped_image = crop_rotated_bbox(image, center, size, angle)
-    return cropped_image
+    return cropped_image, center
 
 
-# returns the largest detected shape, removing noise, etc
-def crop_shape(image):
+def crop_image_multiple_targets(image):
     dilated_image = image
     for _ in range(5):
         dilated_image = binary_dilation(dilated_image)
-    # https://stackoverflow.com/questions/41576815/drawing-contours-using-cv2-approxpolydp-in-python
     contours, hierarchy = cv2.findContours(
         dilated_image,
         cv2.RETR_TREE,
         cv2.CHAIN_APPROX_NONE
     )
+    contours = [contours[i] for i in objects_lookup_distance(hierarchy)]
+    dilated_image = cv2.cvtColor(dilated_image, cv2.COLOR_GRAY2RGB)
 
-    # use cv2 hierarchy structure
-    # because cv2.findContours always returns it in
-    # a proper hierarchal structure, the target index is always the one
-    # two layers deep from root
-    # basic theory explaantion:
-    # https://stackoverflow.com/questions/11782147/python-opencv-contour-tree-hierarchy-structure
-    # TODO: add better exit condition
-    PARENT_INDEX = 3
-    target_index = -1
-    hierarchy = hierarchy[0]
-    for index, object in enumerate(hierarchy):
-        # check the first and then the second parent
-        object_parent = object[PARENT_INDEX]
-        if object_parent != -1:
-            # check grand parent
-            grand_parent = hierarchy[object_parent][PARENT_INDEX]
-            if grand_parent != -1:
-                target_index = index
-                break
-    # TODO: write test case if target index = -1
-    target_contour = contours[target_index]
-    epsilon = 0.1*cv2.arcLength(target_contour, True)
-    approximated_contour = cv2.approxPolyDP(target_contour, epsilon, True)
-    x, y, h, w = cv2.boundingRect(approximated_contour)
+    image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
 
-    # TODO: redo padding to initial crop
-    horizontal_padding = w // 4
-    vertical_padding = h // 4
+    # crop shape
+    results = []
+    for contour in contours:
+        rectangle = cv2.minAreaRect(contour)
+        center, size, angle = rectangle[:3]
+        cropped_shape = crop_rotated_bbox(image, center, size, angle)
+        results.append((cropped_shape, center))
 
-    # this image is undilated
-    cropped_image = image[y:y+h, x:x+w]
+    return results
 
-    # add padding
-    cropped_image = cv2.copyMakeBorder(
-        cropped_image,
-        vertical_padding,
-        vertical_padding,
-        horizontal_padding,
-        horizontal_padding,
-        cv2.BORDER_CONSTANT,
-        value=[0, 0, 0])
 
-    final_image = crop_image_alpha(cropped_image)
-
-    return final_image
+def objects_lookup_distance(hierachy, lookup_distance=2):
+    hierachy = hierachy[0]
+    results = []
+    for index, object in enumerate(hierachy):
+        lookup_flag = True
+        current = object
+        for _ in range(lookup_distance):
+            if current[PARENT_INDEX] != -1:
+                current = hierachy[current[PARENT_INDEX]]
+            else:
+                lookup_flag = False
+        # check if the third lookup_distance is -1
+        if current[PARENT_INDEX] != -1:
+            lookup_flag = False
+        if lookup_flag:
+            results.append(index)
+    return results

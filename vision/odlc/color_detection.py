@@ -72,16 +72,16 @@ def get_text_and_shape_color(img_path):
     # Get the clustered image pixels by:
     # flattening the labels array so it is 1 dimensional
     # then translating each label to its corresponding color
-    res = colors[labels.flatten()]
-
-    # Reshape the array so it is shaped like an image
-    clustered_img = res.reshape((img.shape))
+    clustered = colors[labels.flatten()]
 
     # Now that the image has been reduced to three colors,
     # find out which colors correspond to background, shape, and text.
-    
+
     # We can find the background color by looking at the color at each corner.
     # The backgrouund will be the most common color at the corners.
+
+    # Reshape the array so it is shaped like an image
+    clustered_img = clustered.reshape((img.shape))
 
     # Get the color at each corner of the image
     corners = [clustered_img[0][0], clustered_img[-1][0],
@@ -102,24 +102,24 @@ def get_text_and_shape_color(img_path):
     # We are now left with just the image and shape color.
     colors = np.delete(colors, bg_index, axis=0)
 
-    # Now just differentiate the shape color from the text color
+    # Now just have to differentiate the shape color from the text color.
     # We do this by looking at the number of occurences of each color.
     # The shape should take up more pixels than the text.
 
-    # Create an array of all the text and shape pixels in the clustered image
-    color_array = clustered_img[np.isin(clustered_img, colors)]
+    # If colors[0] shows up more than colors[1],
+    # then set the text to colors[1] and the shape to colors[0]
 
-    # Reshape into an array of pixels with three channels (r, g, b)
-    color_array = color_array.reshape(-1, 3)
+    # Use np.all to match all three channels to the color (r, g, b)
+    # Use np.sum to count the number of truthy values
+    if sum(np.all(np.equal(clustered, colors[0]), axis=1)) >= \
+            sum(np.all(np.equal(clustered, colors[1]), axis=1)):
+        text_rgb = colors[1]
+        shape_rgb = colors[0]
 
-    # Get the number of occurences of each color
-    img_colors, counts = np.unique(color_array, return_counts=True, axis=0)
-
-    # The shape color has more occurences
-    shape_rgb = img_colors[np.argmax(counts)]
-
-    # The text color has less occurences
-    text_rgb = img_colors[np.argmin(counts)]
+    # Do the opposite if the reverse is true
+    else:
+        text_rgb = colors[0]
+        shape_rgb = colors[1]
 
     # Convert the text and shape colors from RGB to HSV
     # since HSV is a better color space for color matching
@@ -143,8 +143,8 @@ def get_text_and_shape_color(img_path):
         'green': ((45, 100, 60), (85, 255, 255)),
         'yellow': ((25, 60, 200), (35, 255, 255)),
         'purple': ((120, 75, 50), (140, 255, 255)),
-        'brown': ((10, 100, 20), (25, 255, 150)),
-        'orange': ((11, 140, 155), (30, 255, 205))
+        'brown': ((0, 51, 46), (23, 255, 150)),
+        'orange': ((11, 140, 155), (30, 255, 255))
     }
 
     # Now just loop through the color ranges

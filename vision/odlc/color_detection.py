@@ -61,13 +61,12 @@ def get_text_and_shape_color(img_path):
                                              criteria, attempts,
                                              cv2.KMEANS_PP_CENTERS)
 
+    colors = colors.astype(np.uint8)
+
     # Convert back from standard to OpenCV L*a*b after clustering
     # so that it's in a form that OpenCV can work with
     for pixel in colors:
         pixel[0] /= L_SCALE_FACTOR
-
-    # convert back from L*a*b to RGB since it's easier to work with
-    colors = cv2.cvtColor(np.uint8([colors]), cv2.COLOR_LAB2RGB)[0]
 
     # Get the clustered image pixels by:
     # flattening the labels array so it is 1 dimensional
@@ -96,7 +95,7 @@ def get_text_and_shape_color(img_path):
 
     # Get the index of the bg_color in the colors list
     # Use np.all to match all three channels of bg_color (r, g, b)
-    bg_index = np.all(np.equal(colors, bg_color), axis=1)
+    bg_index = np.all(colors == bg_color, axis=1)
 
     # Remove the background color from the list.
     # We are now left with just the image and shape color.
@@ -111,20 +110,58 @@ def get_text_and_shape_color(img_path):
 
     # Use np.all to match all three channels to the color (r, g, b)
     # Use np.sum to count the number of truthy values
-    if sum(np.all(np.equal(clustered, colors[0]), axis=1)) >= \
-            sum(np.all(np.equal(clustered, colors[1]), axis=1)):
-        text_rgb = colors[1]
-        shape_rgb = colors[0]
+    if sum(np.all(clustered == colors[0], axis=1)) >= \
+            sum(np.all(clustered == colors[1], axis=1)):
+        text_lab = colors[1]
+        shape_lab = colors[0]
 
     # Do the opposite if the reverse is true
     else:
-        text_rgb = colors[0]
-        shape_rgb = colors[1]
+        text_lab = colors[0]
+        shape_lab = colors[1]
 
-    # Convert the text and shape colors from RGB to HSV
-    # since HSV is a better color space for color matching
-    text_hsv = cv2.cvtColor(np.uint8([[text_rgb]]), cv2.COLOR_RGB2HSV)
-    shape_hsv = cv2.cvtColor(np.uint8([[shape_rgb]]), cv2.COLOR_RGB2HSV)
+    # In cases where the shape has a dark border around it (due to shadow,
+    # lighting, compression, etc) and the text color is dark, the shape outline
+    # may be clustered with the text. To perform accurate color analysis,
+    # this border should be removed from the text pixels.
+
+    # Create a mask of all the pixels currently categorized as text pixels
+    mask = np.all(clustered == text_lab, axis=1)
+
+    # Reshape the mask to match the image shape
+    mask = mask.reshape(img.shape[0:2])
+
+    # Convert the mask to an array of ints, where 255 indicates a text pixel
+    # and 0 indicates any other pixel
+    mask = mask.astype(np.uint8)*255
+
+    # Here we use the cv2.erode function, which scans the area around a pixel,
+    # which is called the kernel. If the kernel contains any pixels of 0 value,
+    # then it sets the current pixel to 0. Here, our kernel is a 3x3 square.
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    mask = cv2.erode(mask, kernel)
+
+    # Perform the masking on the image and reshape it into a list of pixels
+    masked = cv2.bitwise_and(img, img, mask=mask)
+    masked = masked.reshape((-1, 3))
+
+    # Extract the text pixels by checking for pixels with any non-zero values
+    text_pixels = masked[np.any(masked, axis=1)]
+
+    # Calculate the average L, A, and B values.
+    text_lab = text_pixels.mean(axis=0)
+
+    # Convert the text and shape colors from LAB to HSV for color matching
+    # OpenCV provides no direct way to convert from LAB to HSV,
+    # so we must convert from LAB to RGB and then RGB to HSV
+
+    text_hsv = cv2.cvtColor(cv2.cvtColor(np.uint8([[text_lab]]),
+                                         cv2.COLOR_LAB2RGB),
+                            cv2.COLOR_RGB2HSV)
+
+    shape_hsv = cv2.cvtColor(cv2.cvtColor(np.uint8([[shape_lab]]),
+                                          cv2.COLOR_LAB2RGB),
+                             cv2.COLOR_RGB2HSV)
 
     # This dict defines a bounding box for each color in the HSV color space
     # h ranges from (0,179), s ranges from (0,255), v ranges from (0,255)

@@ -11,7 +11,7 @@ import cv2
 # Performs k-means clustering on the image to segment it
 # into 3 colors: background, shape, and color.
 # Then determines which color corresponds to which object
-# and performs color matching using predefined HSV color ranges.
+# by counting the occurences of each color.
 
 
 # @param img_path: cropped image filepath
@@ -151,56 +151,8 @@ def get_text_and_shape_color(img_path):
     # Calculate the average L, A, and B values.
     text_lab = text_pixels.mean(axis=0)
 
-    # Convert the text and shape colors from LAB to HSV for color matching
-    # OpenCV provides no direct way to convert from LAB to HSV,
-    # so we must convert from LAB to RGB and then RGB to HSV
+    # Convert to RGB and return values
+    text_rgb = cv2.cvtColor(np.uint8([[text_lab]]), cv2.COLOR_LAB2RGB)
+    shape_rgb = cv2.cvtColor(np.uint8([[shape_lab]]), cv2.COLOR_LAB2RGB)
 
-    text_hsv = cv2.cvtColor(cv2.cvtColor(np.uint8([[text_lab]]),
-                                         cv2.COLOR_LAB2RGB),
-                            cv2.COLOR_RGB2HSV)
-
-    shape_hsv = cv2.cvtColor(cv2.cvtColor(np.uint8([[shape_lab]]),
-                                          cv2.COLOR_LAB2RGB),
-                             cv2.COLOR_RGB2HSV)
-
-    # This dict defines a bounding box for each color in the HSV color space
-    # h ranges from (0,179), s ranges from (0,255), v ranges from (0,255)
-    # 'color': ((h_min, s_min, v_min), (h_max, s_max, v_max))
-
-    # Note: red is here twice since its hue "wraps around"
-    # A second bounding box for blue may need to be added, pending results
-
-    COLOR_RANGES = {
-        'white': ((0, 0, 230), (180, 50, 255)),
-        'black': ((0, 0, 0), (180, 255, 65)),
-        'gray': ((0, 0, 90), (180, 50, 205)),
-        'red': ((0, 130, 100), (10, 255, 255)),
-        'red': ((165, 130, 100), (180, 255, 255)),
-        'blue': ((100, 180, 50), (119, 255, 255)),
-        'green': ((45, 100, 60), (85, 255, 255)),
-        'yellow': ((25, 60, 200), (35, 255, 255)),
-        'purple': ((120, 75, 50), (140, 255, 255)),
-        'brown': ((0, 51, 46), (23, 255, 150)),
-        'orange': ((11, 140, 155), (30, 255, 255))
-    }
-
-    # Now just loop through the color ranges
-    # and check if the shape or text color fits within the range
-
-    text_color = ''
-    shape_color = ''
-
-    for color in COLOR_RANGES:
-
-        # If the text hsv is in the range of the current color,
-        # then set that as the text color
-        if cv2.inRange(text_hsv,
-                       COLOR_RANGES[color][0], COLOR_RANGES[color][1]):
-            text_color = color
-
-        # Do the same with the shape hsv
-        if cv2.inRange(shape_hsv,
-                       COLOR_RANGES[color][0], COLOR_RANGES[color][1]):
-            shape_color = color
-
-    return (text_color, shape_color)
+    return (text_rgb, shape_rgb)

@@ -33,6 +33,11 @@
     <input type="range" min="0" max="360" value="0" class="slider" id="thetaslide" onchange="drawImage()">
 </div>
 
+<div>
+    <div>Letter</div>
+    <input type="text" class="slider" id="letterBox" onchange="drawImage()">
+</div>
+
 <script type="application/javascript">
     WIDTH = 1800;
     HEIGHT = 1200;
@@ -86,6 +91,7 @@
     let xRange = [50, WIDTH-50];
     let yRange = [50, HEIGHT-50];
     let sizeRange = [1, 1200];
+    let letter = "";
     updateSliders();
 
     document.getElementById("xslide").value = x;
@@ -150,7 +156,8 @@
         let bcolor = document.getElementById("colors-back").value;
         let fcolor = document.getElementById("colors-fore").value;
         let theta = document.getElementById("thetaslide").value / 180 * Math.PI;
-        
+        let letter = document.getElementById("letterBox").value;
+
         xpoints = [];
         ypoints = [];
         ctx.translate(x, y);
@@ -330,17 +337,17 @@
 
         if (selection == 'quarter-circle')
         {
-            ctx.fillText("A", x - (10 * size/100.0), y + (50 * size/100.0));
+            ctx.fillText(letter, x - (10 * size/100.0), y + (50 * size/100.0));
         }
 
         else if (selection == 'triangle')
         {
-            ctx.fillText("A", x, y + (55 * size/100.0));
+            ctx.fillText(letter, x, y + (55 * size/100.0));
         }
 
         else
         {
-            ctx.fillText("A", x, y + (30 * size/100.0));
+            ctx.fillText(letter, x, y + (30 * size/100.0));
         }
 
 

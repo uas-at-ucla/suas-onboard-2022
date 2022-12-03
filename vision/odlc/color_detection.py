@@ -2,16 +2,24 @@
 Detect text and shape color
 """
 
-import numpy as np
 import cv2
+import numpy as np
+
+
+# (color, hue lower bound, hue upper bound)
+COLOR_RANGES = [
+    ('red', 0, 7), ('orange', 8, 19), ('yellow', 20, 32), ('green', 33, 82),
+    ('blue', 83, 122), ('purple', 123, 155), ('red', 156, 180)
+]
 
 
 # Input image should be cropped so that
 # the image only contains one target.
-# Performs k-means clustering on the image to segment it
-# into 3 colors: background, shape, and color.
-# Then determines which color corresponds to which object
-# by counting the occurences of each color.
+# Draw contours on the image. Filter out
+# shadows and small contours of noise, leaving
+# behind just the shape, text, and any holes
+# in the text. Then just calculate the median
+# color of the text and the shape.
 
 
 # @param img_path: cropped image filepath
@@ -23,136 +31,141 @@ def get_text_and_shape_color(img_path):
     # Read in the image
     img = cv2.imread(img_path)
 
-    # Convert image to L*a*b color space for better clustering results
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+    # Convert image to RGB since OpenCV reads images in BGR
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    # Format the image data so it's just a list of pixels
-    # We do this so it fits the OpenCV clustering function
-    vectorized = img.reshape((-1, 3))
-    vectorized = np.float32(vectorized)
+    # Slight blur to remove noise in text pixels
+    img = cv2.medianBlur(img, 3)
 
-    # Convert from OpenCV L*a*b to standard L*a*b
-    # since it provides more accurate clustering.
-    # OpenCV's L channel ranges from 0-255
-    # while the standard L channel ranges from 0-100.
+    # ------ DRAWING CONTOURS ------ #
 
-    L_SCALE_FACTOR = 100/255
+    # Now we will draw contours around each object in the image
+    # e.g. contours for the shape and text
 
-    # Do the conversion on the L channel (the first channel)
-    for pixel in vectorized:
-        pixel[0] *= L_SCALE_FACTOR
+    # Use the canny operator to create a mask of the edges
+    canny = cv2.Canny(img, 100, 200)
 
-    # K-MEANS CLUSTERING
-    # stop when either epsilon (accuracy 1.0) is reached
-    # or when max iterations (10) is reached
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+    # Dilate (expand) it so that edges are connected
+    kernel = np.ones((2, 2), np.uint8)
+    canny = cv2.dilate(canny, kernel)
 
-    # 3 clusters: background, shape, text
-    K = 3
+    # Find the contours
+    contours, hierarchy = cv2.findContours(canny, cv2.RETR_CCOMP,
+                                           cv2.CHAIN_APPROX_SIMPLE)
 
-    # Run the algorithm 10 times
-    attempts = 10
+    # Some basic reformatting to make things easier
+    contours = np.array(contours, dtype=object)
+    hierarchy = hierarchy[0]
 
-    # OpenCV provides a kmeans function:
-    # compactness: sum of squared distance from each point to their centers
-    # labels: array where each pixel is marked with a cluster label
-    # colors: the centers of clusters (L*a*b values in this case)
-    compactness, labels, colors = cv2.kmeans(vectorized, K, None,
-                                             criteria, attempts,
-                                             cv2.KMEANS_PP_CENTERS)
+    # ------ REMOVING CONTOURS OF SHADOWS AND SMALL NOISE ------ #
 
-    colors = colors.astype(np.uint8)
+    final_contours = []
 
-    # Convert back from standard to OpenCV L*a*b after clustering
-    # so that it's in a form that OpenCV can work with
-    for pixel in colors:
-        pixel[0] /= L_SCALE_FACTOR
+    # Loop through the different hierarchy levels,
+    # skipping the -1 level since it contains the outer edge contours
+    # and we only want the inner edge contours.
 
-    # Get the clustered image pixels by:
-    # flattening the labels array so it is 1 dimensional
-    # then translating each label to its corresponding color
-    clustered = colors[labels.flatten()]
+    # This removes the shadows since the outer edge
+    # draws a contour around both the shadow and shape,
+    # but the inner edge will draw one contour for the shape
+    # and a separate one for the shadow.
+    # We then eliminate the shadow by looking at
+    # all the contours along the inner edge
+    # and taking the contour with the largest area
+    # (which also removes the small contours of noise).
 
-    # Now that the image has been reduced to three colors,
-    # find out which colors correspond to background, shape, and text.
+    # get the different levels so we can loop through them
+    levels = np.unique(hierarchy[:, 3])
 
-    # We can find the background color by looking at the color at each corner.
-    # The backgrouund will be the most common color at the corners.
+    # skip the first level (-1)
+    for level in levels[1::]:
 
-    # Reshape the array so it is shaped like an image
-    clustered_img = clustered.reshape((img.shape))
+        # get the contours of the current level
+        cnts = contours[hierarchy[:, 3] == level]
 
-    # Get the color at each corner of the image
-    corners = [clustered_img[0][0], clustered_img[-1][0],
-               clustered_img[0][-1], clustered_img[-1][-1]]
+        # Add the contour with the largest area to the contour list
+        final_contours.append(max(cnts, key=cv2.contourArea))
 
-    # Get the number of occurences of each color
-    corner_colors, counts = np.unique(corners, return_counts=True, axis=0)
+    # Sort contours with the outer layers first and the inner layers last
+    final_contours = final_contours[::-1]
 
-    # Set the background color to the color
-    # that appears most often at the corners
-    bg_color = corner_colors[np.argmax(counts)]
+    # ------ MASKING ------ #
 
-    # Get the index of the bg_color in the colors list
-    # Use np.all to match all three channels of bg_color (r, g, b)
-    bg_index = np.all(colors == bg_color, axis=1)
+    empty_img = np.zeros(img.shape[0:2])
 
-    # Remove the background color from the list.
-    # We are now left with just the image and shape color.
-    colors = np.delete(colors, bg_index, axis=0)
+    # Draw the masks. The first (outermost) contour is the shape.
+    # The next outermost contour is the text.
+    shape_mask = cv2.drawContours(empty_img.copy(), final_contours, 0, 255, -1)
+    text_mask = cv2.drawContours(empty_img.copy(), final_contours, 1, 255, -1)
 
-    # Now just have to differentiate the shape color from the text color.
-    # We do this by looking at the number of occurences of each color.
-    # The shape should take up more pixels than the text.
+    # Any additional contours are holes
+    # Loop through additional contours and remove them from the text
+    for i in range(2, len(final_contours)):
 
-    # If colors[0] shows up more than colors[1],
-    # then set the text to colors[1] and the shape to colors[0]
+        hole_mask = cv2.drawContours(empty_img.copy(),
+                                     final_contours, i, 255, -1)
 
-    # Use np.all to match all three channels to the color (r, g, b)
-    # Use np.sum to count the number of truthy values
-    if sum(np.all(clustered == colors[0], axis=1)) >= \
-            sum(np.all(clustered == colors[1], axis=1)):
-        text_lab = colors[1]
-        shape_lab = colors[0]
+        # Remove the hole mask from the text mask
+        text_mask = np.logical_xor(text_mask, hole_mask)
 
-    # Do the opposite if the reverse is true
-    else:
-        text_lab = colors[0]
-        shape_lab = colors[1]
+    # Remove the text mask from the shape mask
+    shape_mask = np.logical_xor(shape_mask, text_mask)
 
-    # In cases where the shape has a dark border around it (due to shadow,
-    # lighting, compression, etc) and the text color is dark, the shape outline
-    # may be clustered with the text. To perform accurate color analysis,
-    # this border should be removed from the text pixels.
+    # reformat
+    shape_mask = np.uint8(shape_mask)
+    text_mask = np.uint8(text_mask)
 
-    # Create a mask of all the pixels currently categorized as text pixels
-    mask = np.all(clustered == text_lab, axis=1)
+    # Erode (contract) both masks to reverse the dilation performed earlier
+    shape_mask = cv2.erode(shape_mask, kernel)
+    text_mask = cv2.erode(text_mask, kernel)
 
-    # Reshape the mask to match the image shape
-    mask = mask.reshape(img.shape[0:2])
+    # Use the mask on the color image to extract the pixels
+    shape_pixels = cv2.bitwise_and(img, img, mask=shape_mask)
+    text_pixels = cv2.bitwise_and(img, img, mask=text_mask)
 
-    # Convert the mask to an array of ints, where 255 indicates a text pixel
-    # and 0 indicates any other pixel
-    mask = mask.astype(np.uint8)*255
+    # ------ COLOR EXTRACTION ------ #
 
-    # Here we use the cv2.erode function, which scans the area around a pixel,
-    # which is called the kernel. If the kernel contains any pixels of 0 value,
-    # then it sets the current pixel to 0. Here, our kernel is a 3x3 square.
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    mask = cv2.erode(mask, kernel)
+    # reshape into just an array of pixels
+    shape_pixels = shape_pixels.reshape(-1, 3)
+    text_pixels = text_pixels.reshape(-1, 3)
 
-    # Perform the masking on the image and reshape it into a list of pixels
-    masked = cv2.bitwise_and(img, img, mask=mask)
-    masked = masked.reshape((-1, 3))
+    # Extract the pixels that aren't empty
+    shape_pixels = shape_pixels[np.any(shape_pixels, axis=1)]
+    text_pixels = text_pixels[np.any(text_pixels, axis=1)]
 
-    # Extract the text pixels by checking for pixels with any non-zero values
-    text_pixels = masked[np.any(masked, axis=1)]
+    # Compute the median color
+    # since median is more robust than mean
+    shape_rgb = np.median(shape_pixels, axis=0)
+    text_rgb = np.median(text_pixels, axis=0)
 
-    # Calculate the average L, A, and B values.
-    text_lab = text_pixels.mean(axis=0)
+    # Get the color name
+    shape_color = color_name(shape_rgb)
+    text_color = color_name(text_rgb)
 
-    # Convert to RGB and return values
-    text_rgb = cv2.cvtColor(np.uint8([[text_lab]]), cv2.COLOR_LAB2RGB)
-    shape_rgb = cv2.cvtColor(np.uint8([[shape_lab]]), cv2.COLOR_LAB2RGB)
+    return (text_color, shape_color)
 
-    return (text_rgb, shape_rgb)
+
+def color_name(rgb):
+    # color conversions
+    hsv = cv2.cvtColor(np.uint8([[rgb]]), cv2.COLOR_RGB2HSV)[0][0]
+    hls = cv2.cvtColor(np.uint8([[rgb]]), cv2.COLOR_RGB2HLS)[0][0]
+    lab = cv2.cvtColor(np.uint8([[rgb]]), cv2.COLOR_RGB2LAB)[0][0]
+
+    # TODO: BROWN DETECTION
+
+    # black detection: lightness <= 50
+    if hls[1] <= 50:
+        return 'black'
+
+    # white detection: lightness >= 235
+    if hls[1] >= 225:
+        return 'white'
+
+    # gray detection: a* and b* are close to neutral(128)
+    if 118 <= lab[1] <= 138 and 118 <= lab[2] <= 138:
+        return 'gray'
+
+    # general color detection, looping through color ranges
+    for color in COLOR_RANGES:
+        if color[1] <= hsv[0] <= color[2]:
+            return color[0]

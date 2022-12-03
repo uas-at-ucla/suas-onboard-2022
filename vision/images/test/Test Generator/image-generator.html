@@ -88,13 +88,14 @@
 
     // Draw background
     const image = new Image(WIDTH, HEIGHT);
-    // image.setAttribute('crossOrigin', 'anonomous')
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
     ctx.canvas.width = WIDTH;
     ctx.canvas.height = HEIGHT;
     image.onload = drawImageActualSize;
-    image.src = "http://uas.seas.ucla.edu/assets/suas/asphalt_background.jpg";
+    // image.setAttribute('crossOrigin', 'anonymous');
+    // image.src = "https://uas.seas.ucla.edu/assets/suas/asphalt_background.jpg";
+    image.src = "./asphalt_finer_grain.png";
 
     function drawImageActualSize() {
         ctx.drawImage(this, 0, 0);
@@ -123,7 +124,7 @@
     }
 
 
-    
+
     function generate() {
             for (let i = 0 ; i < document.getElementById("numberOfFiles").value; i++){
                 let randomX = Math.floor((Math.random() * WIDTH)+1);
@@ -144,25 +145,22 @@
                 document.getElementById("shapes").value = randomShape;
                 drawImage();
             }
-            alert("hello")
-
             var c = document.getElementById("canvas").crossOrigin;
             var dataURL = canvas.toDataURL();
             console.log(dataURL);
             var newTab = window.open('about:blank', 'image from canvas');
             newTab.document.write("<img src='" + dataURL + "'alt='from canvas'/>");
 
-            alert("hello")
         }
-        
+
 
 
     // https://stackoverflow.com/questions/4839993/how-to-draw-polygons-on-an-html5-canvas
     function regularPolygon(numberOfSides, size, Xcenter, Ycenter) {
-        
-        
+
+
         ctx.moveTo (Xcenter +  size * Math.cos(0), Ycenter +  size *  Math.sin(0));
-        
+
         for (var i = 1; i <= numberOfSides; i+=1) {
             ctx.lineTo (Xcenter + size * Math.cos(i * 2 * Math.PI / numberOfSides), Ycenter + size * Math.sin(i * 2 * Math.PI / numberOfSides));
         }
@@ -233,7 +231,7 @@
         else if (selection == 'quarter-circle') {
             let x1 = parseInt(x) - parseInt(size);
             let y1 = parseInt(y) + parseInt(size);
-            
+
             xpoints.push(x + size * Math.cos(theta) - size * Math.sin(theta));
             ypoints.push(y + size * Math.sin(theta) + size * Math.cos(theta));
 
@@ -276,9 +274,9 @@
             ctx.closePath();
 
         }
-        else if (selection == 'square') 
+        else if (selection == 'square')
         {
-            
+
             ctx.rect(x-size, y-size, 2*size, 2*size);
 
             xpoints.push(x + size * Math.cos(theta) - size * Math.sin(theta));

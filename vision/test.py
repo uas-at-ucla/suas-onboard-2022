@@ -3,8 +3,6 @@ import unittest
 from odlc import tesseract
 from odlc import color_detection
 
-import cv2
-
 
 class TesseractTests(unittest.TestCase):
     image_path_1 = '/app/images/test/tesseract-test1.png'
@@ -117,25 +115,25 @@ class ColorDetectionTests(unittest.TestCase):
         self.assertEqual(shape_color, 'red')
 
     def test_color_detection_11(self):
-            text_color, shape_color = \
-                color_detection.get_text_and_shape_color(self.image_path_11)
+        text_color, shape_color = \
+            color_detection.get_text_and_shape_color(self.image_path_11)
 
-            self.assertEqual(text_color, 'blue')
-            self.assertEqual(shape_color, 'white')
+        self.assertEqual(text_color, 'blue')
+        self.assertEqual(shape_color, 'white')
 
     def test_color_detection_12(self):
-            text_color, shape_color = \
-                color_detection.get_text_and_shape_color(self.image_path_12)
+        text_color, shape_color = \
+            color_detection.get_text_and_shape_color(self.image_path_12)
 
-            self.assertEqual(text_color, 'red')
-            self.assertEqual(shape_color, 'yellow')
+        self.assertEqual(text_color, 'red')
+        self.assertEqual(shape_color, 'yellow')
 
     def test_color_detection_13(self):
-            text_color, shape_color = \
-                color_detection.get_text_and_shape_color(self.image_path_13)
+        text_color, shape_color = \
+            color_detection.get_text_and_shape_color(self.image_path_13)
 
-            self.assertEqual(text_color, 'orange')
-            self.assertEqual(shape_color, 'black')
+        self.assertEqual(text_color, 'orange')
+        self.assertEqual(shape_color, 'black')
 
 
 if __name__ == "__main__":

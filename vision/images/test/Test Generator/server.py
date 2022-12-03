@@ -17,7 +17,7 @@ if sys.version_info < (3, 0):
         '.svg': 'image/svg+xml',
         '.css': 'text/css',
         '.js':  'application/x-javascript',
-        '': 'application/octet-stream', # Default
+        '': 'application/octet-stream',
     }
 
     httpd = SocketServer.TCPServer(("", PORT), Handler)
@@ -28,12 +28,11 @@ if sys.version_info < (3, 0):
 
 else:
     import http.server
-    from http.server import HTTPServer, BaseHTTPRequestHandler
     import socketserver
 
     Handler = http.server.SimpleHTTPRequestHandler
 
-    Handler.extensions_map={
+    Handler.extensions_map = {
         '.manifest': 'text/cache-manifest',
         '.html': 'text/html',
         '.png': 'image/png',
@@ -41,7 +40,7 @@ else:
         '.svg': 'image/svg+xml',
         '.css': 'text/css',
         '.js':  'application/x-javascript',
-        '': 'application/octet-stream', # Default
+        '': 'application/octet-stream',
     }
 
     httpd = socketserver.TCPServer(("", PORT), Handler)

@@ -1,6 +1,29 @@
-"""
-Perform inference on neural network models or geometric vision algorithms here
-"""
+import os
+
+from detectron2.engine import DefaultPredictor
+from detectron2.config import get_cfg
+from detectron2 import model_zoo
+
+
+class Model:
+    def __init__(self, model_path):
+        cfg = get_cfg()
+        cfg.MODEL.DEVICE = 'cpu'
+        cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegment"
+                                                      "ation/mask_rcnn_R_50_"
+                                                      "FPN_3x.yaml"))
+        cfg.MODEL.WEIGHTS = model_path
+        cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128
+        cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1
+        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = \
+            float(os.environ.get('ALPHANUMERIC_MODEL_THRESHOLD'))
+
+        self.predictor = DefaultPredictor(cfg)
+
+    def detect_boxes(self, img):
+        outputs = self.predictor(img)
+
+        return outputs['instances'].get_fields()['pred_boxes'].tensor
 
 
 def detect_mannikins(img):

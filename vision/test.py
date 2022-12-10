@@ -1,8 +1,44 @@
 import unittest
+import cv2
+import os
 
 from odlc import tesseract
 from odlc import color_detection
+from odlc import inference
 
+
+class AlphanumericModelTests(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        super(AlphanumericModelTests, self).__init__(*args, **kwargs)
+        self.model = inference.Model('/app/odlc/models/alphanumeric_model.pth')
+        self.image_path_1 = '/app/images/test/alphanumeric-model-test1.jpg'
+        self.image_path_2 = '/app/images/test/tesseract-test4.png'
+
+    def test_alphanumeric_inference_1(self):
+        img = cv2.imread(self.image_path_1)
+        pred = self.model.detect_boxes(img)
+        self.assertEqual(pred.shape[0], 1)
+        self.assertTrue(pred[0][0] > 890)
+        self.assertTrue(pred[0][0] < 895)
+        self.assertTrue(pred[0][1] > 773)
+        self.assertTrue(pred[0][1] < 777)
+        self.assertTrue(pred[0][2] > 1016)
+        self.assertTrue(pred[0][2] < 1020)
+        self.assertTrue(pred[0][3] > 865)
+        self.assertTrue(pred[0][3] < 870)
+
+    def test_alphanumeric_inference_2(self):
+        img = cv2.imread(self.image_path_2)
+        pred = self.model.detect_boxes(img)
+        self.assertEqual(pred.shape[0], 1)
+        self.assertTrue(pred[0][0] > 548)
+        self.assertTrue(pred[0][0] < 553)
+        self.assertTrue(pred[0][1] > 540)
+        self.assertTrue(pred[0][1] < 545)
+        self.assertTrue(pred[0][2] > 760)
+        self.assertTrue(pred[0][2] < 765)
+        self.assertTrue(pred[0][3] > 652)
+        self.assertTrue(pred[0][3] < 657)
 
 class TesseractTests(unittest.TestCase):
     image_path_1 = '/app/images/test/tesseract-test1.png'

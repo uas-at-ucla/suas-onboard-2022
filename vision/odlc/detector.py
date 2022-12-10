@@ -13,6 +13,7 @@ from odlc import inference
 
 r = redis.Redis(host='redis', port=6379, db=0)
 tolerance = int(os.environ.get('DETECTION_TOLERANCE'))
+alphanumeric_model = inference.Model('/app/odlc/models/alphanumeric_model.pth')
 
 
 def get_detection_confidence(detection):

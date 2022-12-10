@@ -1,6 +1,5 @@
 
 <head>
-
 </head>
 
 <body>
@@ -28,15 +27,36 @@
     <input type="range" min="1" max="100" value="50" class="slider" id="sizeslide" onchange="drawImage()">
 </div>
 
+<a id="link"></a>
+
 <div class="slidecontainer">
     <div>Rotation</div>
     <input type="range" min="0" max="360" value="0" class="slider" id="thetaslide" onchange="drawImage()">
 </div>
 
+<div>
+    <div>Letter</div>
+    <input type="text" class="slider" id="letterBox" onchange="drawImage()">
+</div>
+
+<div>
+    <div>Number of Random Images Generated</div>
+    <input type="text" class="slider" id="numberOfFiles" onchange="drawImage()">
+</div>
+
+<div>
+    <div>Generate and Store</div>
+    <button id = "download" onclick="generate()" crossorigin="anonymous" >Randomly Generate and Store</button>
+</div>
+
+<div>
+    <div>Link</div>
+    <a href="" target="_blank">Visit W3Schools!</a>
+</div>
+
 <script type="application/javascript">
     WIDTH = 1800;
     HEIGHT = 1200;
-
     // Fill spinners
     let colors = ['black', 'white', 'gray', 'red', 'blue', 'green', 'yellow', 'purple', 'brown', 'orange'];
     let shapes = ['circle', 'semicircle', 'quarter-circle', 'triangle', 'square', 'rectangle', 'trapezoid',
@@ -44,6 +64,8 @@
     let shape_selector = document.getElementById('shapes');
     let colors_1 = document.getElementById('colors-back');
     let colors_2 = document.getElementById('colors-fore');
+    var xpoints = [];
+    var ypoints = [];
 
     shapes.forEach(element => {
         let opt = document.createElement('option');
@@ -71,7 +93,9 @@
     ctx.canvas.width = WIDTH;
     ctx.canvas.height = HEIGHT;
     image.onload = drawImageActualSize;
-    image.src = "background.png";
+    // image.setAttribute('crossOrigin', 'anonymous');
+    // image.src = "https://uas.seas.ucla.edu/assets/suas/asphalt_background.jpg";
+    image.src = "./asphalt_finer_grain.png";
 
     function drawImageActualSize() {
         ctx.drawImage(this, 0, 0);
@@ -84,6 +108,7 @@
     let xRange = [50, WIDTH-50];
     let yRange = [50, HEIGHT-50];
     let sizeRange = [1, 1200];
+    let letter = "";
     updateSliders();
 
     document.getElementById("xslide").value = x;
@@ -98,11 +123,45 @@
         document.getElementById("yslide").max = yRange[1];
     }
 
+
+
+    function generate() {
+            for (let i = 0 ; i < document.getElementById("numberOfFiles").value; i++){
+                let randomX = Math.floor((Math.random() * WIDTH)+1);
+                let randomY = Math.floor((Math.random() * HEIGHT)+1);
+                let randomSize = Math.floor((Math.random() * 100)+1);
+                let randomTheta = Math.floor((Math.random() * 360)+1);
+                let randomAlpha= String.fromCharCode(65 + Math.floor(Math.random() * 26));
+                let randomBackColor = colors[Math.floor(Math.random() * colors.length)];
+                let randomFrontColor = colors[Math.floor(Math.random() * colors.length)];
+                let randomShape = shapes[Math.floor(Math.random() * shapes.length)];
+                document.getElementById("xslide").value = randomX;
+                document.getElementById("yslide").value = randomY;
+                document.getElementById("sizeslide").value = randomSize;
+                document.getElementById("thetaslide").value = randomTheta;
+                document.getElementById("letterBox").value = randomAlpha;
+                document.getElementById("colors-back").value = randomBackColor;
+                document.getElementById("colors-fore").value = randomFrontColor;
+                document.getElementById("shapes").value = randomShape;
+                drawImage();
+            }
+            var c = document.getElementById("canvas").crossOrigin;
+            var dataURL = canvas.toDataURL();
+            console.log(dataURL);
+            var newTab = window.open('about:blank', 'image from canvas');
+            newTab.document.write("<img src='" + dataURL + "'alt='from canvas'/>");
+
+        }
+
+
+
     // https://stackoverflow.com/questions/4839993/how-to-draw-polygons-on-an-html5-canvas
     function regularPolygon(numberOfSides, size, Xcenter, Ycenter) {
+
+
         ctx.moveTo (Xcenter +  size * Math.cos(0), Ycenter +  size *  Math.sin(0));
 
-        for (var i = 1; i <= numberOfSides;i += 1) {
+        for (var i = 1; i <= numberOfSides; i+=1) {
             ctx.lineTo (Xcenter + size * Math.cos(i * 2 * Math.PI / numberOfSides), Ycenter + size * Math.sin(i * 2 * Math.PI / numberOfSides));
         }
     }
@@ -146,22 +205,45 @@
         let bcolor = document.getElementById("colors-back").value;
         let fcolor = document.getElementById("colors-fore").value;
         let theta = document.getElementById("thetaslide").value / 180 * Math.PI;
+        let letter = document.getElementById("letterBox").value;
 
+        xpoints = [];
+        ypoints = [];
         ctx.translate(x, y);
         ctx.rotate(theta);
         ctx.translate(-1*x, -1*y);
         ctx.beginPath();
         if (selection == 'circle') {
+            xpoints.push(x - size);
+            xpoints.push(x - size);
+            xpoints.push(x + size);
+            xpoints.push(x + size);
+            ypoints.push(y - size);
+            ypoints.push(y + size);
+            ypoints.push(y + size);
+            ypoints.push(y - size);
             ctx.arc(x, y, size, 2 * Math.PI, false);
         }
         else if (selection == 'semicircle') {
             ctx.arc(x, y + size / 2, size, Math.PI, false);
             ctx.closePath();
-
         }
         else if (selection == 'quarter-circle') {
             let x1 = parseInt(x) - parseInt(size);
             let y1 = parseInt(y) + parseInt(size);
+
+            xpoints.push(x + size * Math.cos(theta) - size * Math.sin(theta));
+            ypoints.push(y + size * Math.sin(theta) + size * Math.cos(theta));
+
+            xpoints.push(x - size * Math.cos(theta) - size * Math.sin(theta));
+            ypoints.push(y - size * Math.sin(theta) + size * Math.cos(theta));
+
+            xpoints.push(x + size * Math.cos(theta) + size * Math.sin(theta));
+            ypoints.push(y + size * Math.sin(theta) - size * Math.cos(theta));
+
+            xpoints.push(x - size * Math.cos(theta) + size * Math.sin(theta));
+            ypoints.push(y - size * Math.sin(theta) - size * Math.cos(theta));
+
             ctx.arc(x1, y1, size * 2, 3 * Math.PI / 2, false);
             ctx.lineTo(x1, y1);
             ctx.closePath();
@@ -169,16 +251,62 @@
         }
         else if (selection == 'triangle') {
             let h = size;
+
+            xpoints.push(x + size * Math.cos(theta) - size * Math.sin(theta));
+            ypoints.push(y + size * Math.sin(theta) + size * Math.cos(theta));
+
+            xpoints.push(x - size * Math.cos(theta) - size * Math.sin(theta));
+            ypoints.push(y - size * Math.sin(theta) + size * Math.cos(theta));
+
+            xpoints.push(x + size * Math.cos(theta) + size * Math.sin(theta));
+            ypoints.push(y + size * Math.sin(theta) - size * Math.cos(theta));
+
+            xpoints.push(x - size * Math.cos(theta) + size * Math.sin(theta));
+            ypoints.push(y - size * Math.sin(theta) - size * Math.cos(theta));
+
+
             ctx.moveTo(x, y - h);
+
             ctx.lineTo(x + h, y + h);
+
             ctx.lineTo(x - h, y + h);
+
             ctx.closePath();
+
         }
-        else if (selection == 'square') {
+        else if (selection == 'square')
+        {
+
             ctx.rect(x-size, y-size, 2*size, 2*size);
+
+            xpoints.push(x + size * Math.cos(theta) - size * Math.sin(theta));
+            ypoints.push(y + size * Math.sin(theta) + size * Math.cos(theta));
+
+            xpoints.push(x - size * Math.cos(theta) - size * Math.sin(theta));
+            ypoints.push(y - size * Math.sin(theta) + size * Math.cos(theta));
+
+            xpoints.push(x + size * Math.cos(theta) + size * Math.sin(theta));
+            ypoints.push(y + size * Math.sin(theta) - size * Math.cos(theta));
+
+            xpoints.push(x - size * Math.cos(theta) + size * Math.sin(theta));
+            ypoints.push(y - size * Math.sin(theta) - size * Math.cos(theta));
+
         }
         else if (selection == 'rectangle') {
             ctx.rect(x-size, y-size / 2, 2*size, size);
+
+            xpoints.push(x + size * Math.cos(theta) - 0.5 * size * Math.sin(theta));
+            ypoints.push(y + size * Math.sin(theta) + 0.5 * size * Math.cos(theta));
+
+            xpoints.push(x - size * Math.cos(theta) - 0.5 * size * Math.sin(theta));
+            ypoints.push(y - size * Math.sin(theta) + 0.5 * size * Math.cos(theta));
+
+            xpoints.push(x + size * Math.cos(theta) + 0.5 * size * Math.sin(theta));
+            ypoints.push(y + size * Math.sin(theta) - 0.5 * size * Math.cos(theta));
+
+            xpoints.push(x - size * Math.cos(theta) + 0.5 * size * Math.sin(theta));
+            ypoints.push(y - size * Math.sin(theta) - 0.5 * size * Math.cos(theta));
+
         }
         else if (selection == 'trapezoid') {
             ctx.moveTo(x - size, y + size / 2);
@@ -186,9 +314,32 @@
             ctx.lineTo(x + size / 2, y - size / 2);
             ctx.lineTo(x + size, y + size / 2);
             ctx.closePath();
+
+            xpoints.push(x + size * Math.cos(theta) - 0.5 * size * Math.sin(theta));
+            ypoints.push(y + size * Math.sin(theta) + 0.5 * size * Math.cos(theta));
+
+            xpoints.push(x - size * Math.cos(theta) - 0.5 * size * Math.sin(theta));
+            ypoints.push(y - size * Math.sin(theta) + 0.5 * size * Math.cos(theta));
+
+            xpoints.push(x + size * Math.cos(theta) + 0.5 * size * Math.sin(theta));
+            ypoints.push(y + size * Math.sin(theta) - 0.5 * size * Math.cos(theta));
+
+            xpoints.push(x - size * Math.cos(theta) + 0.5 * size * Math.sin(theta));
+            ypoints.push(y - size * Math.sin(theta) - 0.5 * size * Math.cos(theta));
         }
         else if (selection == 'pentagon') {
             regularPolygon(5, size, x, y);
+            xpoints.push(x + size * Math.cos(theta) - size * Math.sin(theta));
+            ypoints.push(y + size * Math.sin(theta) + size * Math.cos(theta));
+
+            xpoints.push(x - size * Math.cos(theta) - size * Math.sin(theta));
+            ypoints.push(y - size * Math.sin(theta) + size * Math.cos(theta));
+
+            xpoints.push(x + size * Math.cos(theta) + size * Math.sin(theta));
+            ypoints.push(y + size * Math.sin(theta) - size * Math.cos(theta));
+
+            xpoints.push(x - size * Math.cos(theta) + size * Math.sin(theta));
+            ypoints.push(y - size * Math.sin(theta) - size * Math.cos(theta));
         }
         else if (selection == 'hexagon') {
             regularPolygon(6, size, x, y);
@@ -209,6 +360,19 @@
         ctx.fillStyle = bcolor;
         ctx.fill();
 
+        //finding coordinates for bounding box
+        xmax = Math.max(...xpoints);
+        xmin = Math.min(...xpoints);
+        ymax = Math.max(...ypoints);
+        ymin = Math.min(...ypoints);
+        //console.log(xpoints);
+        console.log(xmin);
+        console.log(xmax);
+        console.log(ymin);
+        console.log(ymax);
+
+
+
         // Bounding box
         ctx.beginPath();
         ctx.lineWidth = "4";
@@ -216,12 +380,37 @@
         ctx.rect(x-size-2, y-size-2, 2*size+4, 2*size+4);
         ctx.stroke();
 
-        ctx.font = "60px Arial";
+        ctx.font = size + "px Arial";
         ctx.fillStyle = fcolor;
         ctx.textAlign = 'center';
-        ctx.fillText("A", x, y + 15);
+
+        if (selection == 'quarter-circle')
+        {
+            ctx.fillText(letter, x - (10 * size/100.0), y + (50 * size/100.0));
+        }
+
+        else if (selection == 'triangle')
+        {
+            ctx.fillText(letter, x, y + (55 * size/100.0));
+        }
+
+        else
+        {
+            ctx.fillText(letter, x, y + (30 * size/100.0));
+        }
+
 
         ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+        ctx.beginPath();
+        ctx.lineWidth = "5";
+        ctx.strokeStyle = "blue";
+        ctx.moveTo(xmin, ymin);
+        ctx.lineTo(xmin, ymax);
+        ctx.lineTo(xmax, ymax);
+        ctx.lineTo(xmax, ymin);
+        ctx.lineTo(xmin, ymin);
+        ctx.stroke();
 
     }
 

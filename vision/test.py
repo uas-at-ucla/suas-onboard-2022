@@ -1,6 +1,5 @@
 import unittest
 import cv2
-import os
 
 from odlc import tesseract
 from odlc import color_detection
@@ -39,6 +38,7 @@ class AlphanumericModelTests(unittest.TestCase):
         self.assertTrue(pred[0][2] < 765)
         self.assertTrue(pred[0][3] > 652)
         self.assertTrue(pred[0][3] < 657)
+
 
 class TesseractTests(unittest.TestCase):
     image_path_1 = '/app/images/test/tesseract-test1.png'

@@ -146,29 +146,29 @@ class ColorDetectionTests(unittest.TestCase):
 
     def test_color_detection_10(self):
         text_color, shape_color = \
-            color_detection.get_text_and_shape_color(cv2.
-                                                     imread(self.image_path_10))
+            color_detection. \
+            get_text_and_shape_color(cv2.imread(self.image_path_10))
         self.assertEqual(text_color, 'blue')
         self.assertEqual(shape_color, 'red')
 
     def test_color_detection_11(self):
         text_color, shape_color = \
-            color_detection.get_text_and_shape_color(cv2.
-                                                     imread(self.image_path_11))
+            color_detection. \
+            get_text_and_shape_color(cv2.imread(self.image_path_11))
         self.assertEqual(text_color, 'blue')
         self.assertEqual(shape_color, 'white')
 
     def test_color_detection_12(self):
         text_color, shape_color = \
-            color_detection.get_text_and_shape_color(cv2.
-                                                     imread(self.image_path_12))
+            color_detection. \
+            get_text_and_shape_color(cv2.imread(self.image_path_12))
         self.assertEqual(text_color, 'red')
         self.assertEqual(shape_color, 'yellow')
 
     def test_color_detection_13(self):
         text_color, shape_color = \
-            color_detection.get_text_and_shape_color(cv2.
-                                                     imread(self.image_path_13))
+            color_detection. \
+            get_text_and_shape_color(cv2.imread(self.image_path_13))
         self.assertEqual(text_color, 'orange')
         self.assertEqual(shape_color, 'black')
 

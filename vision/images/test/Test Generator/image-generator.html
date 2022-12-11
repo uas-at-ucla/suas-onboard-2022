@@ -50,8 +50,8 @@
 </div>
 
 <div>
-    <div>Link</div>
-    <a href="" target="_blank">Visit W3Schools!</a>
+    <div>Image Annotation</div>
+    <input type="text" class="slider" id="annotation" onchange="drawImage()" style="width: 1100px;">
 </div>
 
 <script type="application/javascript">
@@ -103,11 +103,11 @@
     }
 
     let size = 50;
-    let x = 100;
-    let y = 150;
+    let x = 50;
+    let y = 50;
     let xRange = [50, WIDTH-50];
     let yRange = [50, HEIGHT-50];
-    let sizeRange = [1, 1200];
+    let sizeRange = [1, 100];
     let letter = "";
     updateSliders();
 
@@ -143,6 +143,8 @@
                 document.getElementById("colors-back").value = randomBackColor;
                 document.getElementById("colors-fore").value = randomFrontColor;
                 document.getElementById("shapes").value = randomShape;
+                dictionary = {"x": ((randomX-50)/(WIDTH-100))*100,"y": ((randomY-50)/(HEIGHT-100))*100,"width": ((2*randomSize+4)/(WIDTH))*100, "height": ((2*randomSize+4)/HEIGHT)*100,"rotation": randomTheta, "original_width": 1800, "original_height": 1200};                 
+                document.getElementById("annotation").value = JSON.stringify(dictionary);
                 drawImage();
             }
             var c = document.getElementById("canvas").crossOrigin;

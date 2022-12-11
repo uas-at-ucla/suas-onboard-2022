@@ -2,6 +2,10 @@
 APP_NAME=suas-vision
 PORT=8003
 
+update:
+	wget -O ./vision/odlc/models/alphanumeric_model.pth \
+		https://uas.seas.ucla.edu/model/alphanumeric_model.pth
+
 build:
 	docker compose build
 
@@ -9,7 +13,7 @@ run:
 	docker compose up -d
 
 restart:
-	docker compose restart
+	docker compose up -d --build
 
 kill:
 	docker compose kill

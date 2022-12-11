@@ -26,10 +26,7 @@ COLOR_RANGES = [
 # @return tuple of color names: (text color, shape color)
 
 
-def get_text_and_shape_color(img_path):
-
-    # Read in the image
-    img = cv2.imread(img_path)
+def get_text_and_shape_color(img):
 
     # Convert image to RGB since OpenCV reads images in BGR
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)

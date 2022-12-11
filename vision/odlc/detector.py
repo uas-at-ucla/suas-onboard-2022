@@ -6,10 +6,11 @@ Stateful representation of vision subsystem
 import os
 import math
 import json
+import cv2
 
 import redis
 
-from odlc import inference
+from odlc import inference, color_detection
 
 r = redis.Redis(host='redis', port=6379, db=0)
 tolerance = int(os.environ.get('DETECTION_TOLERANCE'))
@@ -54,6 +55,8 @@ def process_queued_image(img):
     """
     Main routine for image processing
     """
+    global alphanumeric_model
+
     detections = json.loads(r.get('detector/detections'))
 
     # Get emergent detections
@@ -81,6 +84,19 @@ def process_queued_image(img):
             print('New detection found')
             print(detection)
             detections.append(detection)
+
+    # Get alphanumeric detections
+    alphanumeric_detections = alphanumeric_model.detect_boxes(img)
+    print('Alphanumeric detections:', alphanumeric_detections.shape[0])
+    for i in range(alphanumeric_detections.shape[0]):
+        dbox = alphanumeric_detections[i]
+        print(dbox)
+        print(int(dbox[0]))
+        crop_img = img[int(dbox[1]):int(dbox[3]), int(dbox[0]):int(dbox[2])]
+        cv2.imwrite('./img.png', crop_img)
+        fc, bc = color_detection.get_text_and_shape_color(crop_img)
+        print('Foreground color:', fc)
+        print('Background color: ', bc)
 
     json_detections = json.dumps(detections)
     r.set('detector/detections', json_detections)

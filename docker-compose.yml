@@ -11,5 +11,7 @@ services:
       - ALPHANUMERIC_MODEL_THRESHOLD=0.7
     ports:
       - "8003:8003"
+    # volumes:
+    #  - ./vision/:/app/
   redis:
     image: "redis:alpine"

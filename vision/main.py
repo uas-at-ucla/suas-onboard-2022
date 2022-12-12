@@ -2,28 +2,30 @@
 Driver file for SUAS Vision subsystem server
 """
 
-from datetime import date
+from queue import Queue
+from threading import Thread
 import os
+import time
 
-from flask import Flask, Response, request, jsonify
+from flask import Flask, Response, request, jsonify, send_from_directory
 import cv2
+import redis
 
 import model.drone as drone
 import odlc.detector as detector
+import log
 
 
 app = Flask(__name__)             # pylint: disable=invalid-name
+image_queue = Queue()
 FILE_PATH = './images/'
+r = redis.Redis(host='redis', port=6379, db=0)
 
 
 @app.route('/')
 @app.route('/index')
 def index():
-    """
-    Hello world default request
-    TODO: remove this once enough people are onboarded
-    """
-    return 'Hello world!\n'
+    return send_from_directory('html', 'index.html')
 
 
 @app.route('/odlc', methods=['GET'])
@@ -44,24 +46,40 @@ def queue_image_for_odlc():
     """
     # Save file locally, so we can process it using OpenCV
     raw_data = request.get_data()
-    date_str = date.today().strftime("%d-%m-%y-%h-%m-%s")
-    file_location = f'{FILE_PATH}/{date_str}'
+    file_location = f'{FILE_PATH}/{time.time_ns()}-'
     with open(file_location, 'wb') as file:
         file.write(raw_data)
+        image_queue.put({"file_location": file_location,
+                         "telemetry": drone.get_telemetry()})
+
+    return Response(status=200)
+
+
+def process_image_queue(queue):
+    log.info('Queue processing thread starting')
+    while True:
+        task = queue.get()
+        file_location = task['file_location']
+        telemetry = task['telemetry']
+        print('Processing queued image')
+        start_time = time.time()
 
         # Load file and process
         try:
             img = cv2.imread(file_location, cv2.IMREAD_UNCHANGED)
-            detector.process_queued_image(img, drone.get_telemetry())
+            detector.process_queued_image(img, telemetry)
         except Exception as exc:  # pylint: disable=broad-except
             print(repr(exc))
             if os.environ.get('DEBUG'):
                 return 'Exception thrown, see server logs', 500
             return 'Invalid file', 400
 
-    # Delete file and return
-    os.remove(file_location)
-    return Response(status=200)
+        # Delete file and return
+        os.remove(file_location)
+        queue.task_done()
+        log.info('Queued image processed')
+        r.incr('vision/images_processed')
+        r.incrbyfloat('vision/active_time', time.time() - start_time)
 
 
 @app.route('/telemetry', methods=['POST'])
@@ -79,9 +97,8 @@ def update_telemetry():
         assert 'longitude' in req
         assert 'heading' in req
         drone.update_telemetry(req)
-        print(request.json)
     except Exception as exc:
-        print(repr(exc))
+        log.error(repr(exc))
         return 'Badly formed telemetry update', 400
 
     # Return empty response for success (check status code for semantics)
@@ -115,10 +132,37 @@ def update_targets():
                 raise Exception('Type not recognized')
 
         detector.update_targets(data_list)
-        print(request.json)
     except Exception as exc:
-        print(repr(exc))
+        log.error(repr(exc))
         return 'Badly formed target update', 400
 
     # Return empty response for success (check status code for semantics)
     return Response(status=200)
+
+
+@app.route('/status', methods=['GET'])
+def get_status():
+    """
+    Get queue status GET request
+    """
+    num_processed = int(r.get('vision/images_processed').decode('utf-8'))
+    if num_processed > 0:
+        tpi = float(r.get('vision/active_time').
+                    decode('utf-8')) / num_processed
+    else:
+        tpi = 0.0
+    status = {
+        'processed_images': num_processed,
+        'queued_images': image_queue.qsize(),
+        'time_per_image': tpi
+    }
+
+    return jsonify(status)
+
+
+worker = Thread(target=process_image_queue, args=(image_queue, ))
+worker.setDaemon(True)
+worker.start()
+
+r.set('vision/images_processed', 0)
+r.set('vision/active_time', 0.0)

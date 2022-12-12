@@ -1,12 +1,28 @@
 import os
+import warnings
+from functools import wraps
 
 from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
 from detectron2 import model_zoo
 
+import log
+
+
+def ignore_warnings(f):
+    @wraps(f)
+    def inner(*args, **kwargs):
+
+        with warnings.catch_warnings(record=True) as _:
+            warnings.simplefilter("ignore")
+            response = f(*args, **kwargs)
+        return response
+    return inner
+
 
 class Model:
     def __init__(self, model_path):
+        log.info('Initializing model')
         cfg = get_cfg()
         cfg.MODEL.DEVICE = 'cpu'
         cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegment"
@@ -19,7 +35,9 @@ class Model:
             float(os.environ.get('ALPHANUMERIC_MODEL_THRESHOLD'))
 
         self.predictor = DefaultPredictor(cfg)
+        log.info('Model initialized')
 
+    @ignore_warnings
     def detect_boxes(self, img):
         outputs = self.predictor(img)
 

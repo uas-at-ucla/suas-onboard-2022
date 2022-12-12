@@ -11,6 +11,7 @@ import cv2
 
 import redis
 
+import log
 from odlc import inference, color_detection, gps, tesseract
 
 r = redis.Redis(host='redis', port=6379, db=0)
@@ -75,7 +76,7 @@ def process_queued_image(img, telemetry):
         # If they are similar enough, combine detections, otherwise
         # add the new detection to the detection list
         if min_diff < tolerance:
-            print('Duplicate detected:')
+            log.info('Duplicate detected:')
             print(min_comp)
             print(detection)
 
@@ -88,7 +89,7 @@ def process_queued_image(img, telemetry):
 
     # Get alphanumeric detections
     alphanumeric_detections = alphanumeric_model.detect_boxes(img)
-    print('Alphanumeric detections:', alphanumeric_detections.shape[0])
+    log.info(f"Alphanumeric detections: {alphanumeric_detections.shape[0]}")
     for i in range(alphanumeric_detections.shape[0]):
         # Crop image and write out image to debug output
         dbox = alphanumeric_detections[i]
@@ -125,11 +126,11 @@ def process_queued_image(img, telemetry):
         # If they are similar enough, combine detections, otherwise
         # add the new detection to the detection list
         if min_diff < tolerance:
-            print('Duplicate detected, updating duplicate')
+            log.info('Duplicate detected, updating duplicate')
             ccount = min_comp['count']
             min_comp['coords'][0] = (lat + min_comp['coords'][0] * ccount) \
                 / (1 + ccount)
-            min_comp['coords'][1] = (lat + min_comp['coords'][1] * ccount) \
+            min_comp['coords'][1] = (lon + min_comp['coords'][1] * ccount) \
                 / (1 + ccount)
             min_comp['count'] = 1 + ccount
             min_comp['class']['text-color'][fc] = \
@@ -143,12 +144,10 @@ def process_queued_image(img, telemetry):
                     (min_comp['class']['text'][str(t)] * ccount +
                      int(conf)) / (ccount + 1)
 
-            print(min_comp)
-
             # What happens when duplicate detected
             # Update min_comp count, weighted average, stdev, etc.
         else:
-            print('New detection found')
+            log.info('New detection found')
             d['count'] = 1
             d['class'] = {
                 'text-color': {fc: 1},
@@ -158,7 +157,6 @@ def process_queued_image(img, telemetry):
             }
             for t, conf in text:
                 d['class']['text'][str(t)] = int(conf)
-            print(d)
             detections.append(d)
 
     json_detections = json.dumps(detections)

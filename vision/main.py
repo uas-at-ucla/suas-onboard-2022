@@ -52,7 +52,7 @@ def queue_image_for_odlc():
         # Load file and process
         try:
             img = cv2.imread(file_location, cv2.IMREAD_UNCHANGED)
-            detector.process_queued_image(img)
+            detector.process_queued_image(img, drone.get_telemetry())
         except Exception as exc:  # pylint: disable=broad-except
             print(repr(exc))
             if os.environ.get('DEBUG'):
@@ -73,7 +73,12 @@ def update_telemetry():
     # Push updates to drone telemetry
     # If any info is missing, throw an error
     try:
-        drone.update_telemetry(request.json)
+        req = request.json
+        assert 'altitude' in req
+        assert 'latitude' in req
+        assert 'longitude' in req
+        assert 'heading' in req
+        drone.update_telemetry(req)
         print(request.json)
     except Exception as exc:
         print(repr(exc))

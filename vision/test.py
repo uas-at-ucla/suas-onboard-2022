@@ -47,20 +47,20 @@ class TesseractTests(unittest.TestCase):
     image_path_4 = '/app/images/test/tesseract-test4.png'
 
     def test_tesseract_image_1(self):
-        det = tesseract.get_matching_text(self.image_path_1)
+        det = tesseract.get_matching_text(cv2.imread(self.image_path_1))
         print(det)
         self.assertEqual(det[0][0], "A")
 
     def test_tesseract_image_2(self):
-        det = tesseract.get_matching_text(self.image_path_2)
+        det = tesseract.get_matching_text(cv2.imread(self.image_path_2))
         self.assertEqual(det[0][0], "A")
 
     def test_tesseract_image_3(self):
-        det = tesseract.get_matching_text(self.image_path_3)
+        det = tesseract.get_matching_text(cv2.imread(self.image_path_3))
         self.assertEqual(det[0][0], "A")
 
     def test_tesseract_image_4(self):
-        det = tesseract.get_matching_text(self.image_path_4)
+        det = tesseract.get_matching_text(cv2.imread(self.image_path_4))
         print(det)
         self.assertEqual(det[0][0], "A")
 

@@ -17,8 +17,7 @@ from odlc.cropper import crop_shape, crop_image_alpha
 # @return list containing tuples of characters and our confidence
 
 
-def get_matching_text(cropped_img):
-    image = cv2.imread(cropped_img)  # reads image
+def get_matching_text(image):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)  # grayscale
 
     # Binarizes text such that foreground becomes 255, background becomes 0

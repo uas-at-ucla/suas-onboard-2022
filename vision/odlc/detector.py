@@ -17,6 +17,7 @@ from odlc import inference, color_detection, gps, tesseract
 r = redis.Redis(host='redis', port=6379, db=0)
 tolerance = float(os.environ.get('DETECTION_TOLERANCE'))
 alphanumeric_model = inference.Model('/app/odlc/models/alphanumeric_model.pth')
+debugging = (os.environ.get('DEBUG') == 1)
 
 
 def get_detection_confidence(detection):
@@ -37,12 +38,18 @@ def get_detection_diff(d_1, d_2):
     if d_1['type'] != d_2['type']:
         return float('inf')
 
-    # Convert bounding boxes to vectors and calculate Euclidean distance
-    b_1 = d_1['coords']
-    b_2 = d_2['coords']
-    dist = math.sqrt(((b_1[0]-b_2[0]) ** 2) + ((b_1[1]-b_2[1]) ** 2))
+    # Calculate difference using Haversine formula
+    # Difference returned in feet
+    la1, lo1 = d_1['coords']
+    la2, lo2 = d_2['coords']
+    dla = math.radians(abs(la1 - la2))
+    dlo = math.radians(abs(lo1 - lo2))
 
-    return dist
+    a = math.sin(dla / 2.0)**2 + math.cos(math.radians(la1)) * \
+        math.radians(la2) * math.sin(dlo / 2.0) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+
+    return c * 2.093e7
 
 
 def update_targets(targets):
@@ -92,9 +99,13 @@ def process_queued_image(img, telemetry):
     log.info(f"Alphanumeric detections: {alphanumeric_detections.shape[0]}")
     for i in range(alphanumeric_detections.shape[0]):
         # Crop image and write out image to debug output
+        # Resize the cropped image with interpolation to hopefully give
+        # better results for classification
         dbox = alphanumeric_detections[i]
         crop_img = img[int(dbox[1]):int(dbox[3]), int(dbox[0]):int(dbox[2])]
-        cv2.imwrite('./img.png', crop_img)
+        # Save the preprocessed image if we are debugging
+        if debugging:
+            cv2.imwrite(f"./images/debug/img-crop-{i}.png", crop_img)
 
         # Get classification info
         fc, bc = color_detection.get_text_and_shape_color(crop_img)
@@ -141,8 +152,10 @@ def process_queued_image(img, telemetry):
                 min_comp['class']['shape'].get(shape, 0) + 1
             for t, conf in text:
                 min_comp['class']['text'][str(t)] = \
-                    (min_comp['class']['text'][str(t)] * ccount +
-                     int(conf)) / (ccount + 1)
+                    min_comp['class']['text'].get(str(t), 0) + int(conf)
+
+            if debugging:
+                log.info(min_comp)
 
             # What happens when duplicate detected
             # Update min_comp count, weighted average, stdev, etc.
@@ -157,6 +170,10 @@ def process_queued_image(img, telemetry):
             }
             for t, conf in text:
                 d['class']['text'][str(t)] = int(conf)
+
+            if debugging:
+                log.info(d)
+
             detections.append(d)
 
     json_detections = json.dumps(detections)

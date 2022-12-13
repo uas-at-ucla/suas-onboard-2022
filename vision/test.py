@@ -1,9 +1,99 @@
 import unittest
 import cv2
+import requests
 
 from odlc import tesseract
 from odlc import color_detection
 from odlc import inference
+
+
+class IntegrationTests(unittest.TestCase):
+    paths = [
+        ('/app/images/test/alphanumeric-model-test2.jpg', 38.31442311312976,
+         -76.54522971451763),
+        ('/app/images/test/alphanumeric-model-test1.jpg', 38.31421041772561,
+         -76.54400246436776),
+        ('/app/images/test/alphanumeric-model-test3.jpg', 38.3144070396263,
+         -76.54394394383165)
+    ]
+
+    def test_targets(self):
+        targets = [
+            {
+                'type': 'alphanumeric',
+                'class': {
+                    'shape-color': 'blue',
+                    'text-color': 'green',
+                    'text': 'W',
+                    'shape': 'trapezoid',
+                }
+            },
+            {
+                'type': 'alphanumeric',
+                'class': {
+                    'shape-color': 'red',
+                    'text-color': 'blue',
+                    'text': '2',
+                    'shape': 'octagon',
+                }
+            },
+            {
+                'type': 'alphanumeric',
+                'class': {
+                    'shape-color': 'blue',
+                    'text-color': 'white',
+                    'text': 'N',
+                    'shape': 'heptagon',
+                }
+            },
+            {
+                'type': 'alphanumeric',
+                'class': {
+                    'shape-color': 'blue',
+                    'text-color': 'red',
+                    'text': 'D',
+                    'shape': 'semicircle',
+                }
+            }
+        ]
+
+        response = requests.post('http://localhost:8003/targets', json=targets)
+        self.assertEqual(response.status_code, 200)
+
+    def test_telemetry(self):
+        telemetry = {
+            "altitude": 1002,
+            "latitude": 0.10,
+            "longitude": 0.80,
+            "heading": 1.50
+        }
+
+        response = requests.post('http://localhost:8003/telemetry',
+                                 json=telemetry)
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_odlc(self):
+        for (p, lat, lon) in self.paths:
+            with open(p, 'rb') as im:
+                telemetry = {
+                    "altitude": 1002,
+                    "latitude": lat,
+                    "longitude": lon,
+                    "heading": 1.50
+                }
+
+                response = requests.post('http://localhost:8003/telemetry',
+                                         json=telemetry)
+
+                self.assertEqual(response.status_code, 200)
+
+                data = im.read()
+                response = requests.post("http://localhost:8003/odlc",
+                                         data=data,
+                                         headers={'Content-Type':
+                                                  'application/octet-stream'})
+                self.assertEqual(response.status_code, 200)
 
 
 class AlphanumericModelTests(unittest.TestCase):
@@ -48,7 +138,6 @@ class TesseractTests(unittest.TestCase):
 
     def test_tesseract_image_1(self):
         det = tesseract.get_matching_text(cv2.imread(self.image_path_1))
-        print(det)
         self.assertEqual(det[0][0], "A")
 
     def test_tesseract_image_2(self):
@@ -61,7 +150,6 @@ class TesseractTests(unittest.TestCase):
 
     def test_tesseract_image_4(self):
         det = tesseract.get_matching_text(cv2.imread(self.image_path_4))
-        print(det)
         self.assertEqual(det[0][0], "A")
 
 

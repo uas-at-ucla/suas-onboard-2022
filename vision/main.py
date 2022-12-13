@@ -6,6 +6,7 @@ from queue import Queue
 from threading import Thread
 import os
 import time
+import traceback
 
 from flask import Flask, Response, request, jsonify, send_from_directory
 import cv2
@@ -68,11 +69,8 @@ def process_image_queue(queue):
         try:
             img = cv2.imread(file_location, cv2.IMREAD_UNCHANGED)
             detector.process_queued_image(img, telemetry)
-        except Exception as exc:  # pylint: disable=broad-except
-            print(repr(exc))
-            if os.environ.get('DEBUG'):
-                return 'Exception thrown, see server logs', 500
-            return 'Invalid file', 400
+        except Exception:  # pylint: disable=broad-except
+            traceback.print_exc()
 
         # Delete file and return
         os.remove(file_location)

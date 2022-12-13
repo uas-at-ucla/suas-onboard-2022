@@ -6,3 +6,6 @@ images/*.jpeg
 .vscode/*
 *.pyc
 vision/odlc/models/*.pth
+vision/images/debug/*.png
+vision/images/debug/*.jpg
+vision/images/debug/*.jpeg

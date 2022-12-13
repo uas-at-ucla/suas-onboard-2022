@@ -12,12 +12,12 @@ import cv2
 import redis
 
 import log
-from odlc import inference, color_detection, gps, tesseract
+from odlc import inference, color_detection, gps, tesseract, shape_detection
 
 r = redis.Redis(host='redis', port=6379, db=0)
 tolerance = float(os.environ.get('DETECTION_TOLERANCE'))
 alphanumeric_model = inference.Model('/app/odlc/models/alphanumeric_model.pth')
-debugging = (os.environ.get('DEBUG') == 1)
+debugging = (int(os.environ.get('DEBUG')) == 1)
 
 
 def get_detection_confidence(detection):
@@ -55,6 +55,9 @@ def get_detection_diff(d_1, d_2):
 def update_targets(targets):
     r.set('detector/num_detections', len(targets))
     target_json = json.dumps(targets)
+    alphanumeric_targets = [target['class']['shape'] for target in
+                            targets if target['type'] == 'alphanumeric']
+    shape_detection.initialize(alphanumeric_targets)
     r.set('detector/targets', target_json)
     detection_json = json.dumps([])
     r.set('detector/detections', detection_json)
@@ -110,7 +113,7 @@ def process_queued_image(img, telemetry):
         # Get classification info
         fc, bc = color_detection.get_text_and_shape_color(crop_img)
         text = tesseract.get_matching_text(crop_img)
-        shape = 'circle'
+        shapes = shape_detection.detect_shape(crop_img)
         lat, lon = gps.tag(telemetry['altitude'], telemetry['latitude'],
                            telemetry['longitude'], telemetry['heading'],
                            float(os.environ.get('CAMERA_SENSOR_WIDTH')),
@@ -148,8 +151,9 @@ def process_queued_image(img, telemetry):
                 min_comp['class']['text-color'].get(fc, 0) + 1
             min_comp['class']['shape-color'][fc] = \
                 min_comp['class']['shape-color'].get(bc, 0) + 1
-            min_comp['class']['shape'][shape] = \
-                min_comp['class']['shape'].get(shape, 0) + 1
+            for s, conf in shapes:
+                min_comp['class']['shape'][s] = \
+                    min_comp['class']['shape'].get(s, 0) + conf
             for t, conf in text:
                 min_comp['class']['text'][str(t)] = \
                     min_comp['class']['text'].get(str(t), 0) + int(conf)
@@ -165,9 +169,11 @@ def process_queued_image(img, telemetry):
             d['class'] = {
                 'text-color': {fc: 1},
                 'shape-color': {bc: 1},
-                'shape': {shape: 1},
+                'shape': {},
                 'text': {},
             }
+            for s, conf in shapes:
+                d['class']['shape'][s] = conf
             for t, conf in text:
                 d['class']['text'][str(t)] = int(conf)
 

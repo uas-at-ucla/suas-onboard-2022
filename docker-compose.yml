@@ -11,6 +11,7 @@ services:
       - ALPHANUMERIC_MODEL_THRESHOLD=0.7
       - CAMERA_SENSOR_WIDTH=2.0
       - CAMERA_FOCAL_LENGTH=1.0
+      - POLAR_SHAPE_GRANULARITY=100
     ports:
       - "8003:8003"
     # volumes:

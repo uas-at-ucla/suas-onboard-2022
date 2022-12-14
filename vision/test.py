@@ -14,11 +14,15 @@ class IntegrationTests(unittest.TestCase):
         ('/app/images/test/alphanumeric-model-test1.jpg', 38.31421041772561,
          -76.54400246436776),
         ('/app/images/test/alphanumeric-model-test3.jpg', 38.3144070396263,
-         -76.54394394383165)
+         -76.54394394383165),
+        ('/app/images/test/emergent-model-test1.jpg', 38.3143, -76.544)
     ]
 
     def test_targets(self):
         targets = [
+            {
+                'type': 'emergent'
+            },
             {
                 'type': 'alphanumeric',
                 'class': {
@@ -53,6 +57,15 @@ class IntegrationTests(unittest.TestCase):
                     'text-color': 'red',
                     'text': 'D',
                     'shape': 'semicircle',
+                }
+            },
+            {
+                'type': 'alphanumeric',
+                'class': {
+                    'shape-color': 'white',
+                    'text-color': 'purple',
+                    'text': 'T',
+                    'shape': 'heptagon',
                 }
             }
         ]
@@ -132,6 +145,26 @@ class AlphanumericModelTests(unittest.TestCase):
         self.assertTrue(pred[0][2] < 765)
         self.assertTrue(pred[0][3] > 652)
         self.assertTrue(pred[0][3] < 657)
+
+
+class EmergentModelTests(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        super(EmergentModelTests, self).__init__(*args, **kwargs)
+        self.model = inference.Model('/app/odlc/models/emergent_model.pth')
+        self.image_path_1 = '/app/images/test/emergent-model-test1.jpg'
+
+    def test_emergent_inference_1(self):
+        img = cv2.imread(self.image_path_1)
+        pred = self.model.detect_boxes(img)
+        self.assertEqual(pred.shape[0], 1)
+        self.assertTrue(pred[0][0] > 395)
+        self.assertTrue(pred[0][0] < 400)
+        self.assertTrue(pred[0][1] > 1154)
+        self.assertTrue(pred[0][1] < 1159)
+        self.assertTrue(pred[0][2] > 1078)
+        self.assertTrue(pred[0][2] < 1083)
+        self.assertTrue(pred[0][3] > 1662)
+        self.assertTrue(pred[0][3] < 1667)
 
 
 class TesseractTests(unittest.TestCase):

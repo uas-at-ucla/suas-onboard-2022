@@ -4,7 +4,9 @@ PORT=8003
 
 update:
 	wget -O ./vision/odlc/models/alphanumeric_model.pth \
-		https://uas.seas.ucla.edu/model/alphanumeric_model.pth
+		https://uas.seas.ucla.edu/model/alphanumeric_model.pth && \
+	wget -O ./vision/odlc/models/emergent_model.pth \
+		https://uas.seas.ucla.edu/model/emergent_model.pth
 
 build:
 	docker compose build

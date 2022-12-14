@@ -17,6 +17,7 @@ from odlc import inference, color_detection, gps, tesseract, shape_detection
 r = redis.Redis(host='redis', port=6379, db=0)
 tolerance = float(os.environ.get('DETECTION_TOLERANCE'))
 alphanumeric_model = inference.Model('/app/odlc/models/alphanumeric_model.pth')
+emergent_model = inference.Model('/app/odlc/models/emergent_model.pth')
 debugging = (int(os.environ.get('DEBUG')) == 1)
 
 
@@ -114,8 +115,24 @@ def process_queued_image(img, telemetry):
     detections = json.loads(r.get('detector/detections'))
 
     # Get emergent detections
-    emergent_detections = inference.detect_mannikins(img)
-    for detection in emergent_detections:
+    emergent_detections = emergent_model.detect_boxes(img)
+    log.info(f"Alphanumeric detections: {emergent_detections.shape[0]}")
+    for i in range(len(emergent_detections)):
+        dbox = emergent_detections[i]
+        lat, lon = gps.tag(telemetry['altitude'], telemetry['latitude'],
+                           telemetry['longitude'], telemetry['heading'],
+                           float(os.environ.get('CAMERA_SENSOR_WIDTH')),
+                           float(os.environ.get('CAMERA_FOCAL_LENGTH')),
+                           img.shape[0], img.shape[1],
+                           int(dbox[0]) + int(dbox[2]) / 2.0,
+                           int(dbox[1]) + int(dbox[3]) / 2.0,
+                           False)
+
+        detection = {
+            'type': 'emergent',
+            'coords': [math.degrees(lat), math.degrees(lon)],
+        }
+
         # Find most similar existing detection
         min_diff = float('inf')
         min_comp = {}
@@ -125,18 +142,22 @@ def process_queued_image(img, telemetry):
                 min_diff = diff
                 min_comp = comp
 
-        # If they are similar enough, combine detections, otherwise
-        # add the new detection to the detection list
+        # Duplicate found
         if min_diff < tolerance:
-            log.info('Duplicate detected:')
-            print(min_comp)
-            print(detection)
+            log.info('Duplicate detected, updating duplicate')
+            ccount = min_comp['count']
+            min_comp['coords'][0] = (lat + min_comp['coords'][0] * ccount) \
+                / (1 + ccount)
+            min_comp['coords'][1] = (lon + min_comp['coords'][1] * ccount) \
+                / (1 + ccount)
 
-            # What happens when duplicate detected
-            # Update min_comp count, weighted average, stdev, etc.
+            if debugging:
+                log.info(min_comp)
         else:
             print('New detection found')
-            print(detection)
+            detection['count'] = 1
+            if debugging:
+                log.info(detection)
             detections.append(detection)
 
     # Get alphanumeric detections

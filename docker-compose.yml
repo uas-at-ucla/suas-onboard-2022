@@ -3,15 +3,15 @@ services:
   vision-web:
     build: vision
     environment:
-      - NUM_DETECTIONS=5
-      - DETECTION_TOLERANCE=15
       - DEBUG=1
+      - DETECTION_TOLERANCE=15
       - DILATION_ITERATIONS=2
       - DILATION_KERNAL_SIZE=5
+      - POLAR_SHAPE_GRANULARITY=100
       - ALPHANUMERIC_MODEL_THRESHOLD=0.7
+      - EMERGENT_MODEL_THRESHOLD=0.85
       - CAMERA_SENSOR_WIDTH=2.0
       - CAMERA_FOCAL_LENGTH=1.0
-      - POLAR_SHAPE_GRANULARITY=100
     ports:
       - "8003:8003"
     # volumes:

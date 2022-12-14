@@ -31,8 +31,12 @@ class Model:
         cfg.MODEL.WEIGHTS = model_path
         cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128
         cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1
-        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = \
-            float(os.environ.get('ALPHANUMERIC_MODEL_THRESHOLD'))
+        if 'alphanumeric_model' in model_path:
+            cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = \
+                float(os.environ.get('ALPHANUMERIC_MODEL_THRESHOLD'))
+        else:
+            cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = \
+                float(os.environ.get('EMERGENT_MODEL_THRESHOLD'))
 
         self.predictor = DefaultPredictor(cfg)
         log.info('Model initialized')
@@ -42,8 +46,3 @@ class Model:
         outputs = self.predictor(img)
 
         return outputs['instances'].get_fields()['pred_boxes'].tensor
-
-
-def detect_mannikins(img):
-    """TODO: mannikin detection model inference"""
-    return []

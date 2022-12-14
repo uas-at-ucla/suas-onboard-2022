@@ -6,6 +6,7 @@ Stateful representation of vision subsystem
 import os
 import math
 import json
+import time
 
 import cv2
 import redis
@@ -171,7 +172,7 @@ def process_queued_image(img, telemetry):
         crop_img = img[int(dbox[1]):int(dbox[3]), int(dbox[0]):int(dbox[2])]
         # Save the preprocessed image if we are debugging
         if debugging:
-            cv2.imwrite(f"./images/debug/img-crop-{i}.png", crop_img)
+            cv2.imwrite(f"./images/debug/img-crop-{time.time()}.png", crop_img)
 
         # Get classification info
         fc, bc = color_detection.get_text_and_shape_color(crop_img)

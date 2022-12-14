@@ -116,7 +116,7 @@ def process_queued_image(img, telemetry):
 
     # Get emergent detections
     emergent_detections = emergent_model.detect_boxes(img)
-    log.info(f"Alphanumeric detections: {emergent_detections.shape[0]}")
+    log.info(f"Emergent detections: {len(emergent_detections)}")
     for i in range(len(emergent_detections)):
         dbox = emergent_detections[i]
         lat, lon = gps.tag(telemetry['altitude'], telemetry['latitude'],
@@ -162,8 +162,8 @@ def process_queued_image(img, telemetry):
 
     # Get alphanumeric detections
     alphanumeric_detections = alphanumeric_model.detect_boxes(img)
-    log.info(f"Alphanumeric detections: {alphanumeric_detections.shape[0]}")
-    for i in range(alphanumeric_detections.shape[0]):
+    log.info(f"Alphanumeric detections: {len(alphanumeric_detections)}")
+    for i in range(len(alphanumeric_detections)):
         # Crop image and write out image to debug output
         # Resize the cropped image with interpolation to hopefully give
         # better results for classification

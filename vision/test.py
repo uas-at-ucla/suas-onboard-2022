@@ -123,7 +123,7 @@ class AlphanumericModelTests(unittest.TestCase):
     def test_alphanumeric_inference_1(self):
         img = cv2.imread(self.image_path_1)
         pred = self.model.detect_boxes(img)
-        self.assertEqual(pred.shape[0], 1)
+        self.assertEqual(len(pred), 1)
         self.assertTrue(pred[0][0] > 890)
         self.assertTrue(pred[0][0] < 895)
         self.assertTrue(pred[0][1] > 773)
@@ -136,7 +136,7 @@ class AlphanumericModelTests(unittest.TestCase):
     def test_alphanumeric_inference_2(self):
         img = cv2.imread(self.image_path_2)
         pred = self.model.detect_boxes(img)
-        self.assertEqual(pred.shape[0], 1)
+        self.assertEqual(len(pred), 1)
         self.assertTrue(pred[0][0] > 548)
         self.assertTrue(pred[0][0] < 553)
         self.assertTrue(pred[0][1] > 540)
@@ -156,7 +156,7 @@ class EmergentModelTests(unittest.TestCase):
     def test_emergent_inference_1(self):
         img = cv2.imread(self.image_path_1)
         pred = self.model.detect_boxes(img)
-        self.assertEqual(pred.shape[0], 1)
+        self.assertEqual(len(pred), 1)
         self.assertTrue(pred[0][0] > 395)
         self.assertTrue(pred[0][0] < 400)
         self.assertTrue(pred[0][1] > 1154)

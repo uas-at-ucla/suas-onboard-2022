@@ -8,8 +8,8 @@ import math
 import json
 
 import cv2
-
 import redis
+import numpy as np
 
 import log
 from odlc import inference, color_detection, gps, tesseract, shape_detection
@@ -52,11 +52,53 @@ def get_detection_diff(d_1, d_2):
     return c * 2.093e7
 
 
+def compute_alphanumeric_similarity(target, detection):
+    if target['type'] == 'dummy' or detection['type'] == 'dummy':
+        return 0
+
+    similarity = 0
+
+    for c in ['shape', 'text', 'shape-color', 'text-color']:
+        if target['class'][c] in detection['class'][c].keys():
+            items = [(s, c) for s, c in detection['class'][c].items()]
+            items.sort(key=lambda x: x[1], reverse=True)
+            ind = [i for i in range(len(items)) if items[i][0] ==
+                   target['class'][c]][0]
+            conf = 1
+            if c == 'shape':
+                conf = items[ind][1]
+            elif c == 'text':
+                conf = items[ind][1] / 100.0
+            else:
+                conf = items[ind][1] / detection['count']
+            if ind != -1:
+                similarity += 0.25 * np.exp(-0.7 * ind) * conf
+
+    return similarity
+
+
+def bad_pairing_found(similarity_matrix, pairings):
+    n = len(pairings)
+    for i in range(n):
+        for j in range(n):
+            base_stability = similarity_matrix[i][pairings[i]] + \
+                             similarity_matrix[j][pairings[j]]
+            new_stability = similarity_matrix[j][pairings[i]] + \
+                similarity_matrix[i][pairings[j]]
+            if new_stability > base_stability:
+                temp = pairings[i]
+                pairings[i] = pairings[j]
+                pairings[j] = temp
+                return True
+    return False
+
+
 def update_targets(targets):
-    r.set('detector/num_detections', len(targets))
     target_json = json.dumps(targets)
     alphanumeric_targets = [target['class']['shape'] for target in
                             targets if target['type'] == 'alphanumeric']
+    num_emergent = sum(t['type'] == 'emergent' for t in targets)
+    r.set('detector/num_emergent', num_emergent)
     shape_detection.initialize(alphanumeric_targets)
     r.set('detector/targets', target_json)
     detection_json = json.dumps([])
@@ -125,7 +167,7 @@ def process_queued_image(img, telemetry):
 
         d = {
             'type': 'alphanumeric',
-            'coords': [lat, lon],
+            'coords': [math.degrees(lat), math.degrees(lon)],
         }
 
         # Find most similar existing detection
@@ -190,12 +232,56 @@ def get_top_detections():
     """
     Returns the top N detections we are most confident in
     """
-    # If not enough detections, return everything we have so far
+    # Load detections and intended targets
     detections = json.loads(r.get('detector/detections'))
-    num_detections = int(r.get('detector/num_detections'))
-    if len(detections) <= num_detections:
-        return detections
 
-    # Sort detections increasing by confidence and return
-    detections.sort(key=lambda x: -1.0 * get_detection_confidence(x))
-    return detections[0:num_detections]
+    if debugging:
+        log.info(detections)
+
+    targets = json.loads(r.get('detector/targets'))
+    num_emergent = int(r.get('detector/num_emergent'))
+    ret = []
+
+    # Find best emergent detections
+    emergent_detections = [d for d in detections if d['type'] == 'emergent']
+    emergent_detections.sort(key=lambda x: -1.0 * get_detection_confidence(x))
+    for i in range(min(num_emergent, len(emergent_detections))):
+        ret.append(emergent_detections[i])
+
+    # Find matches between targets and detections using stable matching
+    # algorithm. Note that we aren't guaranteed to have the same number of
+    # alphanumeric targets and detections, so we have to pad whichever side
+    # has fewer with dummy entries that have 0 similarity with any other
+    # target/detection
+    alpha_detections = [d for d in detections if d['type'] == 'alphanumeric']
+    alpha_targets = [t for t in targets if t['type'] == 'alphanumeric']
+    n = max(len(alpha_targets), len(alpha_detections))
+    if len(alpha_detections) < n:
+        for i in range(n - len(alpha_detections)):
+            alpha_detections.append({'type': 'dummy'})
+
+    if len(alpha_targets) < n:
+        for i in range(n - len(alpha_targets)):
+            alpha_targets.append({'type': 'dummy'})
+
+    # Compute preferences
+    similarity_matrix = [[compute_alphanumeric_similarity(alpha_targets[i],
+                          alpha_detections[j]) for j in range(n)]
+                         for i in range(n)]
+
+    pairings = [i for i in range(n)]
+    bad_found = bad_pairing_found(similarity_matrix, pairings)
+    while bad_found:
+        bad_found = bad_pairing_found(similarity_matrix, pairings)
+
+    for i in range(n):
+        if alpha_targets[i]['type'] != 'dummy' and \
+           alpha_detections[pairings[i]]['type'] != 'dummy':
+            alpha_targets[i]['coords'] = \
+                alpha_detections[pairings[i]]['coords']
+            ret.append(alpha_targets[i])
+
+    if debugging:
+        log.info(ret)
+
+    return ret

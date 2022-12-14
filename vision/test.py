@@ -73,7 +73,7 @@ class IntegrationTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
 
-    def test_odlc(self):
+    def test_odlc_queueing(self):
         for (p, lat, lon) in self.paths:
             with open(p, 'rb') as im:
                 telemetry = {
@@ -94,6 +94,10 @@ class IntegrationTests(unittest.TestCase):
                                          headers={'Content-Type':
                                                   'application/octet-stream'})
                 self.assertEqual(response.status_code, 200)
+
+    # def test_odlc_retrieval(self):
+    #     response = requests.get('http://localhost:8003/odlc')
+    #     self.assertEqual(response.status_code, 200)
 
 
 class AlphanumericModelTests(unittest.TestCase):

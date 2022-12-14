@@ -7,6 +7,7 @@ from threading import Thread
 import os
 import time
 import traceback
+import math
 
 from flask import Flask, Response, request, jsonify, send_from_directory
 import cv2
@@ -94,6 +95,8 @@ def update_telemetry():
         assert 'latitude' in req
         assert 'longitude' in req
         assert 'heading' in req
+        req['latitude'] = math.radians(req['latitude'])
+        req['longitude'] = math.radians(req['longitude'])
         drone.update_telemetry(req)
     except Exception as exc:
         log.error(repr(exc))

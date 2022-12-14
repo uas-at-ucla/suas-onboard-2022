@@ -15,7 +15,7 @@ import redis
 
 import model.drone as drone
 import odlc.detector as detector
-import log
+import util as util
 
 
 app = Flask(__name__)             # pylint: disable=invalid-name
@@ -58,7 +58,7 @@ def queue_image_for_odlc():
 
 
 def process_image_queue(queue):
-    log.info('Queue processing thread starting')
+    util.info('Queue processing thread starting')
     while True:
         task = queue.get()
         file_location = task['file_location']
@@ -76,7 +76,7 @@ def process_image_queue(queue):
         # Delete file and return
         os.remove(file_location)
         queue.task_done()
-        log.info('Queued image processed')
+        util.info('Queued image processed')
         r.incr('vision/images_processed')
         r.incrbyfloat('vision/active_time', time.time() - start_time)
 
@@ -99,7 +99,7 @@ def update_telemetry():
         req['longitude'] = math.radians(req['longitude'])
         drone.update_telemetry(req)
     except Exception as exc:
-        log.error(repr(exc))
+        util.error(repr(exc))
         return 'Badly formed telemetry update', 400
 
     # Return empty response for success (check status code for semantics)
@@ -134,7 +134,7 @@ def update_targets():
 
         detector.update_targets(data_list)
     except Exception as exc:
-        log.error(repr(exc))
+        util.error(repr(exc))
         return 'Badly formed target update', 400
 
     # Return empty response for success (check status code for semantics)

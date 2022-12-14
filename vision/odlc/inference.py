@@ -8,7 +8,7 @@ from detectron2 import model_zoo
 
 import numpy as np
 
-import log
+import util as util
 
 
 def ignore_warnings(f):
@@ -52,7 +52,7 @@ def iou(bb1, bb2):
 
 class Model:
     def __init__(self, model_path):
-        log.info('Initializing model')
+        util.info('Initializing model')
         cfg = get_cfg()
         cfg.MODEL.DEVICE = 'cpu'
         cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegment"
@@ -69,7 +69,7 @@ class Model:
                 float(os.environ.get('EMERGENT_MODEL_THRESHOLD'))
 
         self.predictor = DefaultPredictor(cfg)
-        log.info('Model initialized')
+        util.info('Model initialized')
 
     @ignore_warnings
     def detect_boxes(self, img):

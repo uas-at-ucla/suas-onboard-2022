@@ -4,9 +4,9 @@ Light wrapper around Tesseract OCR model
 
 import pytesseract
 import cv2
-import os
 import time
 
+import util
 from odlc.cropper import crop_shape, crop_image_alpha
 
 # Assumes that the cropped image contains a single alphanumeric character
@@ -111,8 +111,7 @@ def get_matching_text(image):
     rotation_matrix_ninety = cv2.getRotationMatrix2D(center, 90, 1.0)
 
     # Save the preprocessed image if we are debugging
-    if os.getenv('DEBUG'):
-        cv2.imwrite(f"./images/debug/img-ocr-{time.time()}.png", image)
+    util.debug_imwrite(image, f"./images/debug/img-ocr-{time.time()}.png")
 
     # we check if a letter is detected in every case (right way up, upside
     # down, 90 degrees left, 90 degrees right)

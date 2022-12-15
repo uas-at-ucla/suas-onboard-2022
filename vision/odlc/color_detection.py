@@ -47,12 +47,7 @@ def get_text_and_shape_color(img):
     # Now we will draw contours around each object in the image
     # e.g. contours for the shape and text
 
-    # Use the canny operator to create a mask of the edges
-    v = np.median(img)
-    sigma = 0.33  # how wide the threshold is
-    lower = int(max(0, (1.0 - sigma) * v))
-    upper = int(min(255, (1.0 + sigma) * v))
-    canny = cv2.Canny(img, lower, upper)
+    canny = cv2.Canny(img, 100, 200)
 
     # Expand the object outlines to ensure that they are connected.
     # If the image is big enough, we'll just morph the whole thing.

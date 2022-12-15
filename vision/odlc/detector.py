@@ -7,6 +7,7 @@ import os
 import math
 import json
 import time
+import itertools
 
 import redis
 import numpy as np
@@ -77,22 +78,6 @@ def compute_alphanumeric_similarity(target, detection):
                 similarity += 0.25 * np.exp(-0.7 * ind) * conf
 
     return similarity
-
-
-def bad_pairing_found(similarity_matrix, pairings):
-    n = len(pairings)
-    for i in range(n):
-        for j in range(n):
-            base_stability = similarity_matrix[i][pairings[i]] + \
-                             similarity_matrix[j][pairings[j]]
-            new_stability = similarity_matrix[j][pairings[i]] + \
-                similarity_matrix[i][pairings[j]]
-            if new_stability > base_stability:
-                temp = pairings[i]
-                pairings[i] = pairings[j]
-                pairings[j] = temp
-                return True
-    return False
 
 
 def update_targets(targets):
@@ -322,10 +307,15 @@ def get_top_detections():
                           alpha_detections[j]) for j in range(n)]
                          for i in range(n)]
 
+    ms = 0
     pairings = [i for i in range(n)]
-    bad_found = bad_pairing_found(similarity_matrix, pairings)
-    while bad_found:
-        bad_found = bad_pairing_found(similarity_matrix, pairings)
+    for perm in itertools.permutations(range(n)):
+        s = 0
+        for i in range(n):
+            s += similarity_matrix[i][perm[i]]
+        if s > ms:
+            ms = s
+            pairings = perm
 
     for i in range(n):
         if alpha_targets[i]['type'] != 'dummy' and \

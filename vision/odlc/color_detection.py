@@ -47,7 +47,7 @@ def get_text_and_shape_color(img):
     # Now we will draw contours around each object in the image
     # e.g. contours for the shape and text
 
-    canny = cv2.Canny(img, 100, 200)
+    canny = cv2.Canny(img, 100, 150)
 
     # Expand the object outlines to ensure that they are connected.
     # If the image is big enough, we'll just morph the whole thing.
@@ -195,8 +195,8 @@ def color_name(rgb):
     if hls[1] <= 50:
         return 'black'
 
-    # white detection: lightness >= 205
-    if hls[1] >= 205:
+    # white detection: lightness >= 215
+    if hls[1] >= 215:
         return 'white'
 
     # gray detection: a* and b* are close to neutral(128)

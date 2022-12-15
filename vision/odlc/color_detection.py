@@ -2,6 +2,7 @@
 Detect text and shape color
 """
 
+import os
 import cv2
 import numpy as np
 
@@ -31,8 +32,15 @@ def get_text_and_shape_color(img):
     # Convert image to RGB since OpenCV reads images in BGR
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
+    SIZE_REQ = int(os.environ.get('MIN_DILATION_SIZE'))
+    meets_size_req = min([img.shape[0], img.shape[1]]) > SIZE_REQ
+
+    if not meets_size_req:
+        # Upscale by a factor of 2
+        img = cv2.resize(img, None, fx=2, fy=2, interpolation=cv2.INTER_AREA)
+
     # Slight blur to remove noise in text pixels
-    img = cv2.medianBlur(img, 3)
+    img = cv2.GaussianBlur(img, (3, 3), 0)
 
     # ------ DRAWING CONTOURS ------ #
 
@@ -40,11 +48,43 @@ def get_text_and_shape_color(img):
     # e.g. contours for the shape and text
 
     # Use the canny operator to create a mask of the edges
-    canny = cv2.Canny(img, 100, 200)
+    v = np.median(img)
+    sigma = 0.33  # how wide the threshold is
+    lower = int(max(0, (1.0 - sigma) * v))
+    upper = int(min(255, (1.0 + sigma) * v))
+    canny = cv2.Canny(img, lower, upper)
 
-    # Dilate (expand) it so that edges are connected
-    kernel = np.ones((2, 2), np.uint8)
-    canny = cv2.dilate(canny, kernel)
+    # Expand the object outlines to ensure that they are connected.
+    # If the image is big enough, we'll just morph the whole thing.
+    if meets_size_req:
+        kernel = np.ones((2, 2), np.uint8)
+        canny = cv2.dilate(canny, kernel)
+
+    # If the image is too small, morphing may connect object outlines.
+    # In this case, we separate the contours that are already connected
+    # and those that aren't. We then apply morphology to each group
+    # independently so that they don't connect to one another
+    else:
+        cnts, _ = cv2.findContours(canny, cv2.RETR_CCOMP,
+                                   cv2.CHAIN_APPROX_SIMPLE)
+        cnts = np.array(cnts, dtype=object)
+
+        areas = np.vectorize(cv2.contourArea)
+        perimeters = np.vectorize(cv2.arcLength)
+
+        loose = cnts[perimeters(cnts, True) * 2 > areas(cnts)]
+        cnncted = cnts[perimeters(cnts, True) * 2 < areas(cnts)]
+
+        loose_cnts = cv2.drawContours(np.zeros_like(canny), loose, -1, 255, 1)
+        cnncted_cnts = cv2.drawContours(np.zeros_like(canny),
+                                        cnncted, -1, 255, 1)
+
+        kernel = np.ones((2, 2), np.uint8)
+        cnncted_cnts = cv2.morphologyEx(cnncted_cnts, cv2.MORPH_CLOSE, kernel)
+        loose_cnts = cv2.morphologyEx(loose_cnts, cv2.MORPH_CLOSE, kernel)
+
+        canny = np.bitwise_or(loose_cnts.astype(int), cnncted_cnts.astype(int))
+        canny = np.uint8(canny)
 
     # Find the contours
     contours, hierarchy = cv2.findContours(canny, cv2.RETR_CCOMP,
@@ -81,10 +121,16 @@ def get_text_and_shape_color(img):
         cnts = contours[hierarchy[:, 3] == level]
 
         # Add the contour with the largest area to the contour list
-        final_contours.append(max(cnts, key=cv2.contourArea))
+        largest = max(cnts, key=cv2.contourArea)
+
+        # even kernel sizes shift contours
+        # so we translate it up 1, left 1 to reverse it
+        largest -= [1, 1]
+
+        final_contours.append(largest)
 
     # Sort contours with the outer layers first and the inner layers last
-    final_contours = final_contours[::-1]
+    final_contours = sorted(final_contours, key=cv2.contourArea, reverse=True)
 
     # ------ MASKING ------ #
 
@@ -112,9 +158,9 @@ def get_text_and_shape_color(img):
     shape_mask = np.uint8(shape_mask)
     text_mask = np.uint8(text_mask)
 
-    # Erode (contract) both masks to reverse the dilation performed earlier
-    shape_mask = cv2.erode(shape_mask, kernel)
-    text_mask = cv2.erode(text_mask, kernel)
+    # Clean both masks by eroding
+    shape_mask = cv2.erode(shape_mask, kernel, iterations=2)
+    text_mask = cv2.erode(text_mask, kernel, iterations=2)
 
     # Use the mask on the color image to extract the pixels
     shape_pixels = cv2.bitwise_and(img, img, mask=shape_mask)
@@ -154,8 +200,8 @@ def color_name(rgb):
     if hls[1] <= 50:
         return 'black'
 
-    # white detection: lightness >= 235
-    if hls[1] >= 225:
+    # white detection: lightness >= 205
+    if hls[1] >= 205:
         return 'white'
 
     # gray detection: a* and b* are close to neutral(128)

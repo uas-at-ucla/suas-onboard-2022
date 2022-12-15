@@ -169,7 +169,9 @@ def process_queued_image(img, telemetry):
         # Resize the cropped image with interpolation to hopefully give
         # better results for classification
         dbox = alphanumeric_detections[i]
-        crop_img = img[int(dbox[1]):int(dbox[3]), int(dbox[0]):int(dbox[2])]
+        padding = int(os.environ.get('CROP_PADDING'))
+        crop_img = img[int(dbox[1])-padding:int(dbox[3])+padding,
+                       int(dbox[0])-padding:int(dbox[2])+padding]
         # Save the preprocessed image if we are debugging
         if debugging:
             cv2.imwrite(f"./images/debug/img-crop-{time.time()}.png", crop_img)

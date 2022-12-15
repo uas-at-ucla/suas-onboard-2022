@@ -12,9 +12,11 @@ services:
       - EMERGENT_MODEL_THRESHOLD=0.85
       - CAMERA_SENSOR_WIDTH=2.0
       - CAMERA_FOCAL_LENGTH=1.0
+      - CROP_PADDING=5
+      - MIN_DILATION_SIZE=80
     ports:
       - "8003:8003"
-    # volumes:
-    #  - ./vision/:/app/
+    volumes:
+      - ./vision/:/app/
   redis:
     image: "redis:alpine"

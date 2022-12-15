@@ -8,6 +8,8 @@ import cv2
 import numpy as np
 import redis
 
+import util
+
 r = redis.Redis(host='redis', port=6379, db=0)
 granularity = int(os.environ.get('POLAR_SHAPE_GRANULARITY'))
 
@@ -78,9 +80,7 @@ def detect_shape(img):
                                     final_contours, 0, 255, -1)
     edges = cv2.Canny(np.uint8(masked_shape), 100, 200)
 
-    # Write out processed image if debugging
-    if int(os.environ.get('DEBUG')) == 1:
-        cv2.imwrite(f"./images/debug/img-shape-{time.time()}.png", edges)
+    util.debug_imwrite(edges, f"./images/debug/img-shape-{time.time()}.png")
 
     # Find centroid of contour
     M = cv2.moments(edges)

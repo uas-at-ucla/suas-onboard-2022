@@ -5,112 +5,7 @@ import requests
 from odlc import tesseract
 from odlc import color_detection
 from odlc import inference
-
-
-class IntegrationTests(unittest.TestCase):
-    paths = [
-        ('/app/images/test/alphanumeric-model-test2.jpg', 38.31442311312976,
-         -76.54522971451763),
-        ('/app/images/test/alphanumeric-model-test1.jpg', 38.31421041772561,
-         -76.54400246436776),
-        ('/app/images/test/alphanumeric-model-test3.jpg', 38.3144070396263,
-         -76.54394394383165),
-        ('/app/images/test/emergent-model-test1.jpg', 38.3143, -76.544)
-    ]
-
-    def test_targets(self):
-        targets = [
-            {
-                'type': 'emergent'
-            },
-            {
-                'type': 'alphanumeric',
-                'class': {
-                    'shape-color': 'blue',
-                    'text-color': 'green',
-                    'text': 'W',
-                    'shape': 'trapezoid',
-                }
-            },
-            {
-                'type': 'alphanumeric',
-                'class': {
-                    'shape-color': 'red',
-                    'text-color': 'blue',
-                    'text': '2',
-                    'shape': 'octagon',
-                }
-            },
-            {
-                'type': 'alphanumeric',
-                'class': {
-                    'shape-color': 'blue',
-                    'text-color': 'white',
-                    'text': 'N',
-                    'shape': 'heptagon',
-                }
-            },
-            {
-                'type': 'alphanumeric',
-                'class': {
-                    'shape-color': 'blue',
-                    'text-color': 'red',
-                    'text': 'D',
-                    'shape': 'semicircle',
-                }
-            },
-            {
-                'type': 'alphanumeric',
-                'class': {
-                    'shape-color': 'white',
-                    'text-color': 'purple',
-                    'text': 'T',
-                    'shape': 'heptagon',
-                }
-            }
-        ]
-
-        response = requests.post('http://localhost:8003/targets', json=targets)
-        self.assertEqual(response.status_code, 200)
-
-    def test_telemetry(self):
-        telemetry = {
-            "altitude": 1002,
-            "latitude": 0.10,
-            "longitude": 0.80,
-            "heading": 1.50
-        }
-
-        response = requests.post('http://localhost:8003/telemetry',
-                                 json=telemetry)
-
-        self.assertEqual(response.status_code, 200)
-
-    def test_odlc_queueing(self):
-        for (p, lat, lon) in self.paths:
-            with open(p, 'rb') as im:
-                telemetry = {
-                    "altitude": 1002,
-                    "latitude": lat,
-                    "longitude": lon,
-                    "heading": 1.50
-                }
-
-                response = requests.post('http://localhost:8003/telemetry',
-                                         json=telemetry)
-
-                self.assertEqual(response.status_code, 200)
-
-                data = im.read()
-                response = requests.post("http://localhost:8003/odlc",
-                                         data=data,
-                                         headers={'Content-Type':
-                                                  'application/octet-stream'})
-                self.assertEqual(response.status_code, 200)
-
-    # def test_odlc_retrieval(self):
-    #     response = requests.get('http://localhost:8003/odlc')
-    #     self.assertEqual(response.status_code, 200)
+from odlc import shape_detection
 
 
 class AlphanumericModelTests(unittest.TestCase):
@@ -296,6 +191,170 @@ class ColorDetectionTests(unittest.TestCase):
             get_text_and_shape_color(cv2.imread(self.image_path_13))
         self.assertEqual(text_color, 'orange')
         self.assertEqual(shape_color, 'black')
+
+
+class ShapeClassificationTests(unittest.TestCase):
+    image_path_1 = '/app/images/test/DJI_01.JPG'
+    image_path_2 = '/app/images/test/DJI_02.JPG'
+    image_path_3 = '/app/images/test/DJI_03.JPG'
+    image_path_4 = '/app/images/test/DJI_04.JPG'
+    image_path_7 = '/app/images/test/DJI_07.JPG'
+
+    def test_color_detection_1(self):
+        shape_detection.initialize(['star', 'triangle', 'circle', 'rectangle',
+                                    'trapezoid', 'cross', 'pentagon', 'square',
+                                    'semicircle', 'quarter-circle', 'heptagon',
+                                    'hexagon', 'octagon'])
+        predictions = shape_detection.detect_shape(cv2.
+                                                   imread(self.image_path_1))
+
+        self.assertEqual(predictions[0][0], 'semicircle')
+
+    def test_color_detection_2(self):
+        shape_detection.initialize(['star', 'triangle', 'circle', 'rectangle',
+                                    'trapezoid', 'cross', 'pentagon', 'square',
+                                    'semicircle', 'quarter-circle', 'heptagon',
+                                    'hexagon', 'octagon'])
+        predictions = shape_detection.detect_shape(cv2.
+                                                   imread(self.image_path_2))
+
+        self.assertEqual(predictions[0][0], 'circle')
+
+    def test_color_detection_3(self):
+        shape_detection.initialize(['star', 'triangle', 'circle', 'rectangle',
+                                    'trapezoid', 'cross', 'pentagon', 'square',
+                                    'semicircle', 'quarter-circle', 'heptagon',
+                                    'hexagon', 'octagon'])
+        predictions = shape_detection.detect_shape(cv2.
+                                                   imread(self.image_path_3))
+
+        self.assertEqual(predictions[0][0], 'rectangle')
+
+    def test_color_detection_4(self):
+        shape_detection.initialize(['star', 'triangle', 'circle', 'rectangle',
+                                    'trapezoid', 'cross', 'pentagon', 'square',
+                                    'semicircle', 'quarter-circle', 'heptagon',
+                                    'hexagon', 'octagon'])
+        predictions = shape_detection.detect_shape(cv2.
+                                                   imread(self.image_path_4))
+
+        self.assertEqual(predictions[0][0], 'cross')
+
+    def test_color_detection_7(self):
+        shape_detection.initialize(['star', 'triangle', 'circle', 'rectangle',
+                                    'trapezoid', 'cross', 'pentagon', 'square',
+                                    'semicircle', 'quarter-circle', 'heptagon',
+                                    'hexagon', 'octagon'])
+        predictions = shape_detection.detect_shape(cv2.
+                                                   imread(self.image_path_7))
+
+        self.assertEqual(predictions[0][0], 'hexagon')
+
+
+class IntegrationTests(unittest.TestCase):
+    paths = [
+        ('/app/images/test/alphanumeric-model-test2.jpg', 38.31442311312976,
+         -76.54522971451763),
+        ('/app/images/test/alphanumeric-model-test1.jpg', 38.31421041772561,
+         -76.54400246436776),
+        ('/app/images/test/alphanumeric-model-test3.jpg', 38.3144070396263,
+         -76.54394394383165),
+        ('/app/images/test/emergent-model-test1.jpg', 38.3143, -76.544)
+    ]
+
+    def test_targets(self):
+        targets = [
+            {
+                'type': 'emergent'
+            },
+            {
+                'type': 'alphanumeric',
+                'class': {
+                    'shape-color': 'blue',
+                    'text-color': 'green',
+                    'text': 'W',
+                    'shape': 'trapezoid',
+                }
+            },
+            {
+                'type': 'alphanumeric',
+                'class': {
+                    'shape-color': 'red',
+                    'text-color': 'blue',
+                    'text': '2',
+                    'shape': 'octagon',
+                }
+            },
+            {
+                'type': 'alphanumeric',
+                'class': {
+                    'shape-color': 'blue',
+                    'text-color': 'white',
+                    'text': 'N',
+                    'shape': 'heptagon',
+                }
+            },
+            {
+                'type': 'alphanumeric',
+                'class': {
+                    'shape-color': 'blue',
+                    'text-color': 'red',
+                    'text': 'D',
+                    'shape': 'semicircle',
+                }
+            },
+            {
+                'type': 'alphanumeric',
+                'class': {
+                    'shape-color': 'white',
+                    'text-color': 'purple',
+                    'text': 'T',
+                    'shape': 'heptagon',
+                }
+            }
+        ]
+
+        response = requests.post('http://localhost:8003/targets', json=targets)
+        self.assertEqual(response.status_code, 200)
+
+    def test_telemetry(self):
+        telemetry = {
+            "altitude": 1002,
+            "latitude": 0.10,
+            "longitude": 0.80,
+            "heading": 1.50
+        }
+
+        response = requests.post('http://localhost:8003/telemetry',
+                                 json=telemetry)
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_odlc_queueing(self):
+        for (p, lat, lon) in self.paths:
+            with open(p, 'rb') as im:
+                telemetry = {
+                    "altitude": 1002,
+                    "latitude": lat,
+                    "longitude": lon,
+                    "heading": 1.50
+                }
+
+                response = requests.post('http://localhost:8003/telemetry',
+                                         json=telemetry)
+
+                self.assertEqual(response.status_code, 200)
+
+                data = im.read()
+                response = requests.post("http://localhost:8003/odlc",
+                                         data=data,
+                                         headers={'Content-Type':
+                                                  'application/octet-stream'})
+                self.assertEqual(response.status_code, 200)
+
+    # def test_odlc_retrieval(self):
+    #     response = requests.get('http://localhost:8003/odlc')
+    #     self.assertEqual(response.status_code, 200)
 
 
 if __name__ == "__main__":

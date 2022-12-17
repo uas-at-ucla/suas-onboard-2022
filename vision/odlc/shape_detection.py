@@ -12,6 +12,7 @@ import util
 
 r = redis.Redis(host='redis', port=6379, db=0)
 granularity = int(os.environ.get('POLAR_SHAPE_GRANULARITY'))
+CONVEX_THRESHOLD = float(os.environ.get('CONCAVE_SHAPE_AREA_RATIO_THRESHOLD'))
 
 
 def interpolate(i, dist):
@@ -80,10 +81,21 @@ def detect_shape(img):
                                     final_contours, 0, 255, -1)
     edges = cv2.Canny(np.uint8(masked_shape), 100, 200)
 
-    util.debug_imwrite(edges, f"./images/debug/img-shape-{time.time()}.png")
+    # Create convex hull and convex hull with images
+    hulls = [cv2.convexHull(c, False) for c in final_contours]
+    h_shape = cv2.drawContours(np.zeros(img.shape[0:2]), hulls, 0, 255, -1)
+    edge_hull = cv2.Canny(np.uint8(h_shape), 100, 200)
 
-    # Find centroid of contour
-    M = cv2.moments(edges)
+    util.debug_imwrite(edges,
+                       f"./images/debug/img-edges-{time.time()}.png")
+    util.debug_imwrite(edge_hull,
+                       f"./images/debug/img-hull-{time.time()}.png")
+
+    # Determine if the shape is concave
+    M = cv2.moments(edge_hull)
+    M_comp = cv2.moments(edges)
+    concave = M["m00"] / M_comp["m00"] < CONVEX_THRESHOLD
+
     if M["m00"] == 0:  # No contour exists, so we can't detect anything
         return []
     cX = int(M["m10"] / M["m00"])
@@ -96,7 +108,7 @@ def detect_shape(img):
     h, w, d = img.shape
     for y in range(0, h):
         for x in range(0, w):
-            if edges[y, x] != 0:
+            if edge_hull[y, x] != 0:
                 dx = x - cX
                 dy = y - cY
                 angle = math.atan2(dy, dx)
@@ -141,6 +153,15 @@ def detect_shape(img):
                 miou = intersection / union
         predictions.append((comp, confidence_mapping(miou)))
     predictions.sort(key=lambda x: -1.0 * x[1])
+
+    # Concave, so pentagon ==> star and octagon ==> cross
+    if concave:
+        sc = next(p for p in predictions if p[0] == 'pentagon')[1]
+        cc = next(p for p in predictions if p[0] == 'octagon')[1]
+        p = [('star', sc), ('cross', cc)]
+        p.sort(key=lambda x: -1.0 * x[1])
+        return p
+
     return predictions
 
 

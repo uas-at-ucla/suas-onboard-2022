@@ -9,8 +9,7 @@ def binary_dilation(image):
     kernal = np.ones((kernal_size, kernal_size), np.uint8)
     dilated_image = image
     """TODO: change repeated dilating an image, ALSO CHANGE MAGIC NUMBER"""
-    for i in range(int(2)):
-        dilated_image = cv2.dilate(dilated_image, kernal, iterations=i)
+    dilated_image = cv2.dilate(dilated_image, kernal)
     return dilated_image
 
 
@@ -26,9 +25,10 @@ def crop_rotated_bbox(image, center, size, angle, scale=1):
 
 
 def crop_image_alpha(image):
-    dilated_image = image
-    for _ in range(2):
-        dilated_image = binary_dilation(dilated_image)
+    cv2.imwrite('./images/debug/img-ocr_predilated.png', image)
+    dilated_image = binary_dilation(image)
+    cv2.imwrite('./images/debug/img-ocr_dilated.png', dilated_image)
+    
     contours, _ = cv2.findContours(
         dilated_image,
         cv2.RETR_EXTERNAL,

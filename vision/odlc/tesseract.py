@@ -114,13 +114,9 @@ def get_matching_text(image):
     image_height = image.shape[0]
     image_width = image.shape[1]
 
-    if os.getenv("DEBUG"):
-        print("PRE FILTER: ", len(contours))
-
     contours = filter_contour(contours, image_height, image_width)
 
     if os.getenv("DEBUG"):
-        print("POST FILTER: ", len(contours))
         filtered_contour = cv2.drawContours(og_image.copy(), contours, -1,
                                             (0, 255, 0), 3)
         cv2.imwrite('./images/debug/img-filtered_contours.png',

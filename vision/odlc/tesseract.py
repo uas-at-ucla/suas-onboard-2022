@@ -14,9 +14,6 @@ from odlc.image_processing import noise_removal, thin_font, thick_font, \
 def generate_predictions(image):
     output = []
     image = image_with_border(image)
-    height, width = image.shape[:2]
-    center = (width // 2, height // 2)
-    rotation_matrix_ninety = cv2.getRotationMatrix2D(center, 90, 1.0)
 
     for _ in range(0, 4):
         # get tesseract data from the image
@@ -41,12 +38,7 @@ def generate_predictions(image):
             output.append((letter, confidence))
 
         # rotate image by 90 degrees for next pass
-        image = cv2.warpAffine(
-            image,
-            rotation_matrix_ninety,
-            (width, height),
-            flags=cv2.INTER_CUBIC,
-            borderMode=cv2.BORDER_REPLICATE)
+        image = cv2.rotate(image, cv2.ROTATE_90_COUNTERCLOCKWISE)
     return output
 
 
@@ -91,17 +83,21 @@ def get_matching_text(image):
 
     image = noise_removal(image)
 
+    image = thin_font(image)
+
     if os.getenv("DEBUG"):
         cv2.imwrite('./images/debug/img-noise_removed.png', image)
 
-    image = thin_font(image)
+    # image = thin_font(image)
 
-    image = noise_removal(image)
+    
 
-    if os.getenv("DEBUG"):
-        thick_font_image = thick_font(image)
-        cv2.imwrite('./images/debug/img-noise_thin.png', image)
-        cv2.imwrite('./images/debug/img-noise_thick.png', thick_font_image)
+    # image = noise_removal(image)
+
+    # if os.getenv("DEBUG"):
+    #     thick_font_image = thick_font(image)
+    #     cv2.imwrite('./images/debug/img-noise_thin.png', image)
+    #     cv2.imwrite('./images/debug/img-noise_thick.png', thick_font_image)
 
     contours, _ = cv2.findContours(image, cv2.RETR_TREE,
                                    cv2.CHAIN_APPROX_SIMPLE)
@@ -125,8 +121,11 @@ def get_matching_text(image):
     mean_contour_pixel_values = list(map(
         lambda contour: average_color_contour(contour, og_image),
         contours))
+
+    # og_image = cv2.cvtColor(og_image, cv2.COLOR_BGR2GRAY)
     cropped_images = extract_images_from_contour(og_image, contours)
     k_means_images = []
+    # k_means_images = cropped_images
     for index, crop_image in enumerate(cropped_images):
         k_means_images.append(cropped_images_to_binary(
             crop_image,

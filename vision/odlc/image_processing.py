@@ -15,9 +15,9 @@ def noise_removal(image):
     # taken from:
     # https://github.com/wjbmattingly/ocr_python_textbook/blob/main/02_02_working%20with%20opencv.ipynb
     kernel = np.ones((1, 1), np.uint8)
-    image = cv2.dilate(image, kernel, iterations=2)
+    image = cv2.dilate(image, kernel, iterations=1)
     kernel = np.ones((1, 1), np.uint8)
-    image = cv2.erode(image, kernel, iterations=2)
+    image = cv2.erode(image, kernel, iterations=1)
     image = cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
     image = cv2.medianBlur(image, 3)
     return (image)
@@ -58,7 +58,7 @@ def thick_font(image):
 
 
 def filter_contour(contours, image_width, image_height):
-    """Filter the largest 30 contours and those whose area
+    """Filter the largest 5 contours and those whose area
     is more than 3% the image and less than 50% the image
 
     Args:
@@ -70,19 +70,26 @@ def filter_contour(contours, image_width, image_height):
         list: list of filtered contours
     """
     # TODO: automate process, change values
-    # pick the largest 30 contours
-    if len(contours) > 30:
+    # pick the largest 10 contours
+    if len(contours) > 10:
         contours = list(sorted(
             contours,
             key=lambda contour: cv2.contourArea(contour),
             reverse=True))
-        contours = contours[:30]
+        contours = contours[:10]
 
     image_area = (image_height * image_width)
 
+    #find the contour box area
+    def internal_filter(contour):
+        _, _, h, w = cv2.boundingRect(contour)
+        print(h * w / image_area)
+        if h * w / image_area < 0.03:
+            return False
+        return True
+
     new_contours = list(filter(
-        lambda contour: cv2.contourArea(contour) / image_area > 0.03
-        and cv2.contourArea(contour) / image_area < 0.5,
+        internal_filter,
         contours))
     return new_contours
 

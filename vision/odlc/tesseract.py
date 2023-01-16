@@ -83,21 +83,10 @@ def get_matching_text(image):
 
     image = noise_removal(image)
 
-    image = thin_font(image)
+    image = thick_font(image)
 
     if os.getenv("DEBUG"):
         cv2.imwrite('./images/debug/img-noise_removed.png', image)
-
-    # image = thin_font(image)
-
-    
-
-    # image = noise_removal(image)
-
-    # if os.getenv("DEBUG"):
-    #     thick_font_image = thick_font(image)
-    #     cv2.imwrite('./images/debug/img-noise_thin.png', image)
-    #     cv2.imwrite('./images/debug/img-noise_thick.png', thick_font_image)
 
     contours, _ = cv2.findContours(image, cv2.RETR_TREE,
                                    cv2.CHAIN_APPROX_SIMPLE)

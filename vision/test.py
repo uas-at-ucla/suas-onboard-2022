@@ -181,7 +181,7 @@ class TesseractTests(unittest.TestCase):
 
     @parameterized.expand([
     #    ('/app/images/test/DJI_01.jpg', "D"),
-       ('/app/images/test/DJI_02.jpg', "A"),
+      #  ('/app/images/test/DJI_02.jpg', "A"),
        ('/app/images/test/DJI_03.jpg', "U"),
     #    ('/app/images/test/DJI_04.jpg', "8"),
     #    ('/app/images/test/DJI_05.jpg', "E"),

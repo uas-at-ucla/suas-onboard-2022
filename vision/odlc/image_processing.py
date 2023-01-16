@@ -1,7 +1,6 @@
 import numpy as np
 import cv2
 
-
 def noise_removal(image):
     """Using dilation, erosion, bluring and
        morphology, remove small noise grains
@@ -80,7 +79,7 @@ def filter_contour(contours, image_width, image_height):
 
     image_area = (image_height * image_width)
 
-    #find the contour box area
+    # find the contour box area
     def internal_filter(contour):
         _, _, h, w = cv2.boundingRect(contour)
         print(h * w / image_area)

@@ -17,7 +17,7 @@ services:
       - CAMERA_FOCAL_LENGTH=1.0
     ports:
       - "8003:8003"
-    # volumes:
-    #  - ./vision/:/app/
+    volumes:
+      - ./vision/:/app/
   redis:
     image: "redis:alpine"

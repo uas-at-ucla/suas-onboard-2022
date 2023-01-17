@@ -14,8 +14,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Build the Docker containers and run
-      run: docker compose up -d
+    - name: Build the Docker containers
+      run: make build
+    - name: Start Docker container
+      run: make run
     - name: Run unit tests
       run: docker exec suas-onboard-vision-web-1 python3 -m unittest
     - name: Stop containers

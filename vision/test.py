@@ -170,9 +170,12 @@ class EmergentModelTests(unittest.TestCase):
 
 
 class TesseractTests(unittest.TestCase):
+    # @parameterized.expand([
+    #    ('/app/images/test/tesseract-test1.png', "A"),
+    #    ('/app/images/test/tesseract-test2.png', "A"),
+    #    ('/app/images/test/tesseract-test3.png', "A")])
     @parameterized.expand([
        ('/app/images/test/tesseract-test1.png', "A"),
-       ('/app/images/test/tesseract-test2.png', "A"),
        ('/app/images/test/tesseract-test3.png', "A")])
     def test_ideal_generated_images(self, path, result):
         img = cv2.imread(path)

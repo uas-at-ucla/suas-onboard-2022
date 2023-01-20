@@ -6,7 +6,7 @@ import pytesseract
 import cv2
 import os
 from functools import reduce
-from odlc.image_processing import noise_removal, thin_font, thick_font, \
+from odlc.image_processing import noise_removal, thick_font, \
     filter_contour, extract_images_from_contour, cropped_images_to_binary, \
     image_with_border, average_color_contour
 

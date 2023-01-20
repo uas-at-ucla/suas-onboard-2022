@@ -82,7 +82,6 @@ def filter_contour(contours, image_width, image_height):
     # find the contour box area
     def internal_filter(contour):
         _, _, h, w = cv2.boundingRect(contour)
-        print(h * w / image_area)
         if h * w / image_area < 0.03:
             return False
         return True

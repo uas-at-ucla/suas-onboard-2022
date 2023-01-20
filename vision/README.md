@@ -57,3 +57,10 @@ To run automated tests, run
 ```
 python3 -m unittest
 ```
+
+## API Keys and Env Files
+In the case that you need to run one of the following files:
+```
+tesseract_metric.py
+```
+Please add the appropriate API and env keys.

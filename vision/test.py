@@ -14,7 +14,7 @@ class AlphanumericModelTests(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(AlphanumericModelTests, self).__init__(*args, **kwargs)
         self.model = inference.Model('/app/odlc/models/alphanumeric_model.pth')
-        self.image_path_1 = '/app/images/test/alphanumeric-model-test1.jpg'
+        self.image_path_1 = '/app/images/test/alphanumeric-model-test1.JPG'
         self.image_path_2 = '/app/images/test/tesseract-test4.png'
 
     def test_alphanumeric_inference_1(self):
@@ -48,7 +48,7 @@ class EmergentModelTests(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(EmergentModelTests, self).__init__(*args, **kwargs)
         self.model = inference.Model('/app/odlc/models/emergent_model.pth')
-        self.image_path_1 = '/app/images/test/emergent-model-test1.jpg'
+        self.image_path_1 = '/app/images/test/emergent-model-test1.JPG'
 
     def test_emergent_inference_1(self):
         img = cv2.imread(self.image_path_1)
@@ -78,15 +78,15 @@ class TesseractTests(unittest.TestCase):
         self.assertEqual(det[0][0], result)
 
     # @parameterized.expand([
-    #    ('/app/images/test/DJI_01.jpg', "D"),
-    #    ('/app/images/test/DJI_02.jpg', "A"),
-    #    ('/app/images/test/DJI_03.jpg', "U"),
-    #    ('/app/images/test/DJI_04.jpg', "8"),
-    #    ('/app/images/test/DJI_05.jpg', "E"),
-    #    ('/app/images/test/DJI_06.jpg', "T")
+    #    ('/app/images/test/DJI_01.JPG', "D"),
+    #    ('/app/images/test/DJI_02.JPG', "A"),
+    #    ('/app/images/test/DJI_03.JPG', "U"),
+    #    ('/app/images/test/DJI_04.JPG', "8"),
+    #    ('/app/images/test/DJI_05.JPG', "E"),
+    #    ('/app/images/test/DJI_06.JPG', "T")
     #    ])
     @parameterized.expand([
-       ('/app/images/test/DJI_01.jpg', "D"),
+       ('/app/images/test/DJI_01.JPG', "D"),
        ])
     def test_dji_images(self, path, result):
         img = cv2.imread(path)
@@ -98,19 +98,19 @@ class TesseractTests(unittest.TestCase):
 class ColorDetectionTests(unittest.TestCase):
     # path, text color, shape color
     @parameterized.expand([
-       ('/app/images/test/DJI_01.jpg', "red", "blue"),
-       ('/app/images/test/DJI_02.jpg', "white", "black"),
-       ('/app/images/test/DJI_03.jpg', "gray", "yellow"),
-       ('/app/images/test/DJI_04.jpg', "green", "orange"),
-       ('/app/images/test/DJI_05.jpg', "orange", "yellow"),
-       ('/app/images/test/DJI_06.jpg', "purple", "white"),
-       ('/app/images/test/DJI_07.jpg', "black", "orange"),
-       ('/app/images/test/DJI_08.jpg', "purple", "orange"),
-       ('/app/images/test/DJI_09.jpg', "white", "blue"),
-       ('/app/images/test/DJI_10.jpg', "blue", "red"),
-       ('/app/images/test/DJI_11.jpg', "blue", "white"),
-       ('/app/images/test/DJI_12.jpg', "red", "yellow"),
-       ('/app/images/test/DJI_13.jpg', "orange", "black")])
+       ('/app/images/test/DJI_01.JPG', "red", "blue"),
+       ('/app/images/test/DJI_02.JPG', "white", "black"),
+       ('/app/images/test/DJI_03.JPG', "gray", "yellow"),
+       ('/app/images/test/DJI_04.JPG', "green", "orange"),
+       ('/app/images/test/DJI_05.JPG', "orange", "yellow"),
+       ('/app/images/test/DJI_06.JPG', "purple", "white"),
+       ('/app/images/test/DJI_07.JPG', "black", "orange"),
+       ('/app/images/test/DJI_08.JPG', "purple", "orange"),
+       ('/app/images/test/DJI_09.JPG', "white", "blue"),
+       ('/app/images/test/DJI_10.JPG', "blue", "red"),
+       ('/app/images/test/DJI_11.JPG', "blue", "white"),
+       ('/app/images/test/DJI_12.JPG', "red", "yellow"),
+       ('/app/images/test/DJI_13.JPG', "orange", "black")])
     def test_color_detection_1(self, image_path, target_text, target_shape):
         text_color, shape_color = \
             color_detection.get_text_and_shape_color(cv2.
@@ -180,13 +180,13 @@ class ShapeClassificationTests(unittest.TestCase):
 
 class IntegrationTests(unittest.TestCase):
     paths = [
-        ('/app/images/test/alphanumeric-model-test2.jpg', 38.31442311312976,
+        ('/app/images/test/alphanumeric-model-test2.JPG', 38.31442311312976,
          -76.54522971451763),
-        ('/app/images/test/alphanumeric-model-test1.jpg', 38.31421041772561,
+        ('/app/images/test/alphanumeric-model-test1.JPG', 38.31421041772561,
          -76.54400246436776),
-        ('/app/images/test/alphanumeric-model-test3.jpg', 38.3144070396263,
+        ('/app/images/test/alphanumeric-model-test3.JPG', 38.3144070396263,
          -76.54394394383165),
-        ('/app/images/test/emergent-model-test1.jpg', 38.3143, -76.544)
+        ('/app/images/test/emergent-model-test1.JPG', 38.3143, -76.544)
     ]
 
     def test_targets(self):

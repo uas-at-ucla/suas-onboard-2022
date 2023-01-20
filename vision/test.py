@@ -14,7 +14,7 @@ class AlphanumericModelTests(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(AlphanumericModelTests, self).__init__(*args, **kwargs)
         self.model = inference.Model('/app/odlc/models/alphanumeric_model.pth')
-        self.image_path_1 = '/app/images/test/alphanumeric-model-test1.JPG'
+        self.image_path_1 = '/app/images/test/alphanumeric-model-test1.jpg'
         self.image_path_2 = '/app/images/test/tesseract-test4.png'
 
     def test_alphanumeric_inference_1(self):
@@ -48,7 +48,7 @@ class EmergentModelTests(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(EmergentModelTests, self).__init__(*args, **kwargs)
         self.model = inference.Model('/app/odlc/models/emergent_model.pth')
-        self.image_path_1 = '/app/images/test/emergent-model-test1.JPG'
+        self.image_path_1 = '/app/images/test/emergent-model-test1.jpg'
 
     def test_emergent_inference_1(self):
         img = cv2.imread(self.image_path_1)
@@ -180,13 +180,13 @@ class ShapeClassificationTests(unittest.TestCase):
 
 class IntegrationTests(unittest.TestCase):
     paths = [
-        ('/app/images/test/alphanumeric-model-test2.JPG', 38.31442311312976,
+        ('/app/images/test/alphanumeric-model-test2.jpg', 38.31442311312976,
          -76.54522971451763),
-        ('/app/images/test/alphanumeric-model-test1.JPG', 38.31421041772561,
+        ('/app/images/test/alphanumeric-model-test1.jpg', 38.31421041772561,
          -76.54400246436776),
-        ('/app/images/test/alphanumeric-model-test3.JPG', 38.3144070396263,
+        ('/app/images/test/alphanumeric-model-test3.jpg', 38.3144070396263,
          -76.54394394383165),
-        ('/app/images/test/emergent-model-test1.JPG', 38.3143, -76.544)
+        ('/app/images/test/emergent-model-test1.jpg', 38.3143, -76.544)
     ]
 
     def test_targets(self):

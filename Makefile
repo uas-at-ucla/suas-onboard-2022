@@ -2,6 +2,9 @@
 APP_NAME=suas-vision
 PORT=8003
 
+tidy:
+	rm -rf ./vision/images/debug/*.png
+
 update:
 	wget -O ./vision/odlc/models/alphanumeric_model.pth \
 		https://uas.seas.ucla.edu/model/alphanumeric_model.pth && \

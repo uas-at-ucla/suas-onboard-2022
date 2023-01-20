@@ -6,12 +6,13 @@ Stateful representation of vision subsystem
 import os
 import math
 import json
+import time
+import itertools
 
-import cv2
 import redis
 import numpy as np
 
-import log
+import util as util
 from odlc import inference, color_detection, gps, tesseract, shape_detection
 
 r = redis.Redis(host='redis', port=6379, db=0)
@@ -19,6 +20,7 @@ tolerance = float(os.environ.get('DETECTION_TOLERANCE'))
 alphanumeric_model = inference.Model('/app/odlc/models/alphanumeric_model.pth')
 emergent_model = inference.Model('/app/odlc/models/emergent_model.pth')
 debugging = (int(os.environ.get('DEBUG')) == 1)
+AP = int(os.environ.get('ALPHANUMERIC_DETECTION_PADDING'))
 
 
 def get_detection_confidence(detection):
@@ -78,22 +80,6 @@ def compute_alphanumeric_similarity(target, detection):
     return similarity
 
 
-def bad_pairing_found(similarity_matrix, pairings):
-    n = len(pairings)
-    for i in range(n):
-        for j in range(n):
-            base_stability = similarity_matrix[i][pairings[i]] + \
-                             similarity_matrix[j][pairings[j]]
-            new_stability = similarity_matrix[j][pairings[i]] + \
-                similarity_matrix[i][pairings[j]]
-            if new_stability > base_stability:
-                temp = pairings[i]
-                pairings[i] = pairings[j]
-                pairings[j] = temp
-                return True
-    return False
-
-
 def update_targets(targets):
     target_json = json.dumps(targets)
     alphanumeric_targets = [target['class']['shape'] for target in
@@ -116,17 +102,26 @@ def process_queued_image(img, telemetry):
 
     # Get emergent detections
     emergent_detections = emergent_model.detect_boxes(img)
-    log.info(f"Alphanumeric detections: {emergent_detections.shape[0]}")
+    util.info(f"Emergent detections: {len(emergent_detections)}")
     for i in range(len(emergent_detections)):
         dbox = emergent_detections[i]
-        lat, lon = gps.tag(telemetry['altitude'], telemetry['latitude'],
-                           telemetry['longitude'], telemetry['heading'],
-                           float(os.environ.get('CAMERA_SENSOR_WIDTH')),
-                           float(os.environ.get('CAMERA_FOCAL_LENGTH')),
-                           img.shape[0], img.shape[1],
-                           int(dbox[0]) + int(dbox[2]) / 2.0,
-                           int(dbox[1]) + int(dbox[3]) / 2.0,
-                           False)
+        lat, lon = util.safe_function_call(gps.tag, (0, 0),
+                                           telemetry['altitude'],
+                                           telemetry['latitude'],
+                                           telemetry['longitude'],
+                                           telemetry['heading'],
+                                           float(os.environ.get
+                                                 ('CAMERA_SENSOR_WIDTH')),
+                                           float(os.environ.get
+                                                 ('CAMERA_FOCAL_LENGTH')),
+                                           img.shape[0], img.shape[1],
+                                           int(dbox[0]) + int(dbox[2]) / 2.0,
+                                           int(dbox[1]) + int(dbox[3]) / 2.0,
+                                           False)
+
+        # Ignore a detection with bad coords
+        if lat == 0 and lon == 0:
+            continue
 
         detection = {
             'type': 'emergent',
@@ -144,7 +139,7 @@ def process_queued_image(img, telemetry):
 
         # Duplicate found
         if min_diff < tolerance:
-            log.info('Duplicate detected, updating duplicate')
+            util.info('Duplicate detected, updating duplicate')
             ccount = min_comp['count']
             min_comp['coords'][0] = (lat + min_comp['coords'][0] * ccount) \
                 / (1 + ccount)
@@ -152,39 +147,60 @@ def process_queued_image(img, telemetry):
                 / (1 + ccount)
 
             if debugging:
-                log.info(min_comp)
+                util.info(min_comp)
         else:
             print('New detection found')
             detection['count'] = 1
             if debugging:
-                log.info(detection)
+                util.info(detection)
             detections.append(detection)
 
     # Get alphanumeric detections
     alphanumeric_detections = alphanumeric_model.detect_boxes(img)
-    log.info(f"Alphanumeric detections: {alphanumeric_detections.shape[0]}")
-    for i in range(alphanumeric_detections.shape[0]):
+    util.info(f"Alphanumeric detections: {len(alphanumeric_detections)}")
+    for i in range(len(alphanumeric_detections)):
         # Crop image and write out image to debug output
         # Resize the cropped image with interpolation to hopefully give
         # better results for classification
-        dbox = alphanumeric_detections[i]
-        crop_img = img[int(dbox[1]):int(dbox[3]), int(dbox[0]):int(dbox[2])]
-        # Save the preprocessed image if we are debugging
-        if debugging:
-            cv2.imwrite(f"./images/debug/img-crop-{i}.png", crop_img)
+        dbox = [int(alphanumeric_detections[i][j]) for j in range(4)]
+
+        # Ignore any detection without a buffer around it
+        # We don't want to try to detect the shape of a detection that's
+        # partially cut off by the border
+        if dbox[1] < AP or dbox[3] > img.shape[0] - AP - 1 or \
+           dbox[0] < AP or dbox[2] > img.shape[1] - AP - 1:
+            continue
+
+        crop_img = img[dbox[1]-AP:dbox[3]+AP, dbox[0]-AP:dbox[2]+AP]
+
+        util.debug_imwrite(crop_img,
+                           f"./images/debug/img-crop-{time.time()}.png")
 
         # Get classification info
-        fc, bc = color_detection.get_text_and_shape_color(crop_img)
-        text = tesseract.get_matching_text(crop_img)
-        shapes = shape_detection.detect_shape(crop_img)
-        lat, lon = gps.tag(telemetry['altitude'], telemetry['latitude'],
-                           telemetry['longitude'], telemetry['heading'],
-                           float(os.environ.get('CAMERA_SENSOR_WIDTH')),
-                           float(os.environ.get('CAMERA_FOCAL_LENGTH')),
-                           img.shape[0], img.shape[1],
-                           int(dbox[0]) + int(dbox[2]) / 2.0,
-                           int(dbox[1]) + int(dbox[3]) / 2.0,
-                           False)
+        fc, bc = util.safe_function_call(color_detection.
+                                         get_text_and_shape_color,
+                                         ('none', 'none'), crop_img)
+        text = util.safe_function_call(tesseract.get_matching_text, {},
+                                       crop_img)
+        shapes = util.safe_function_call(shape_detection.detect_shape, {},
+                                         crop_img)
+        lat, lon = util.safe_function_call(gps.tag, (0, 0),
+                                           telemetry['altitude'],
+                                           telemetry['latitude'],
+                                           telemetry['longitude'],
+                                           telemetry['heading'],
+                                           float(os.environ.get
+                                                 ('CAMERA_SENSOR_WIDTH')),
+                                           float(os.environ.get
+                                                 ('CAMERA_FOCAL_LENGTH')),
+                                           img.shape[0], img.shape[1],
+                                           dbox[0] + dbox[2] / 2.0,
+                                           dbox[1] + dbox[3] / 2.0,
+                                           False)
+
+        # Ignore a detection with bad coords
+        if lat == 0 and lon == 0:
+            continue
 
         d = {
             'type': 'alphanumeric',
@@ -203,17 +219,18 @@ def process_queued_image(img, telemetry):
         # If they are similar enough, combine detections, otherwise
         # add the new detection to the detection list
         if min_diff < tolerance:
-            log.info('Duplicate detected, updating duplicate')
+            util.info('Duplicate detected, updating duplicate')
             ccount = min_comp['count']
             min_comp['coords'][0] = (lat + min_comp['coords'][0] * ccount) \
                 / (1 + ccount)
             min_comp['coords'][1] = (lon + min_comp['coords'][1] * ccount) \
                 / (1 + ccount)
             min_comp['count'] = 1 + ccount
-            min_comp['class']['text-color'][fc] = \
-                min_comp['class']['text-color'].get(fc, 0) + 1
-            min_comp['class']['shape-color'][fc] = \
-                min_comp['class']['shape-color'].get(bc, 0) + 1
+            if fc != 'none' and bc != 'none':
+                min_comp['class']['text-color'][fc] = \
+                    min_comp['class']['text-color'].get(fc, 0) + 1
+                min_comp['class']['shape-color'][fc] = \
+                    min_comp['class']['shape-color'].get(bc, 0) + 1
             for s, conf in shapes:
                 min_comp['class']['shape'][s] = \
                     min_comp['class']['shape'].get(s, 0) + conf
@@ -222,12 +239,12 @@ def process_queued_image(img, telemetry):
                     min_comp['class']['text'].get(str(t), 0) + int(conf)
 
             if debugging:
-                log.info(min_comp)
+                util.info(min_comp)
 
             # What happens when duplicate detected
             # Update min_comp count, weighted average, stdev, etc.
         else:
-            log.info('New detection found')
+            util.info('New detection found')
             d['count'] = 1
             d['class'] = {
                 'text-color': {fc: 1},
@@ -241,7 +258,7 @@ def process_queued_image(img, telemetry):
                 d['class']['text'][str(t)] = int(conf)
 
             if debugging:
-                log.info(d)
+                util.info(d)
 
             detections.append(d)
 
@@ -257,7 +274,7 @@ def get_top_detections():
     detections = json.loads(r.get('detector/detections'))
 
     if debugging:
-        log.info(detections)
+        util.info(detections)
 
     targets = json.loads(r.get('detector/targets'))
     num_emergent = int(r.get('detector/num_emergent'))
@@ -290,10 +307,15 @@ def get_top_detections():
                           alpha_detections[j]) for j in range(n)]
                          for i in range(n)]
 
+    ms = 0
     pairings = [i for i in range(n)]
-    bad_found = bad_pairing_found(similarity_matrix, pairings)
-    while bad_found:
-        bad_found = bad_pairing_found(similarity_matrix, pairings)
+    for perm in itertools.permutations(range(n)):
+        s = 0
+        for i in range(n):
+            s += similarity_matrix[i][perm[i]]
+        if s > ms:
+            ms = s
+            pairings = perm
 
     for i in range(n):
         if alpha_targets[i]['type'] != 'dummy' and \
@@ -303,6 +325,6 @@ def get_top_detections():
             ret.append(alpha_targets[i])
 
     if debugging:
-        log.info(ret)
+        util.info(ret)
 
     return ret

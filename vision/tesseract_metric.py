@@ -3,7 +3,7 @@ import requests
 import numpy as np
 import cv2
 import json
-from odlc import tesseract 
+from odlc import tesseract
 from tqdm import tqdm
 from sklearn.metrics import accuracy_score
 
@@ -27,10 +27,11 @@ def get_image_from_url(url_path):
     image = cv2.imdecode(image, cv2.IMREAD_COLOR)
     return image
 
+
 def prediction_counts_as_correct(det, y_true):
     if len(det) == 0:
         return False
-    #take the top three
+    # take the top three
     det = det[:3]
     chars = map(lambda pair: str(pair[0]), det)
     if y_true in chars:
@@ -46,10 +47,6 @@ if __name__ == "__main__":
 
     labeled_tasks = project.get_labeled_tasks()
 
-    # local_path = labeled_tasks[0]["data"]["ocr"]
-
-    # url_path = "https://uas.seas.ucla.edu/" + local_path
-    
     y_true = []
     y_pred = []
 
@@ -80,10 +77,10 @@ if __name__ == "__main__":
                     img_height = result["original_height"]
                     img_width = result["original_width"]
                     break
-            
+
             if annotation_value == {}:
                 continue
-            
+
             # check if annotation has text value
             ocr_annotation_raw = annotation_value["text"][0]
             ocr_annotation_raw = ocr_annotation_raw.replace("\"", "")
@@ -112,7 +109,7 @@ if __name__ == "__main__":
             tesseract_det = tesseract.get_matching_text(image)
             task_y_true = ocr_annotation["text"]
             y_true.append(task_y_true)
-            
+
             if prediction_counts_as_correct(tesseract_det, task_y_true):
                 y_pred.append(task_y_true)
             else:

@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 
+
 def noise_removal(image):
     """Using dilation, erosion, bluring and
        morphology, remove small noise grains

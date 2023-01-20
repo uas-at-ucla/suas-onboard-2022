@@ -4,7 +4,7 @@ RUN apt install build-essential -y
 RUN apt-get install ffmpeg libsm6 libxext6  -y
 RUN apt-get install tesseract-ocr -y
 RUN apt-get install wget -y
-RUN apt-get install git -y
+# RUN apt-get install git -y
 COPY requirements.txt /
 RUN pip3 install -r /requirements.txt
 RUN python -m pip install detectron2 -f \

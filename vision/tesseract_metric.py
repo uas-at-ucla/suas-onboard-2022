@@ -104,7 +104,10 @@ if __name__ == "__main__":
 
             url_path = "https://uas.seas.ucla.edu/" + task["data"]["ocr"]
             image = get_image_from_url(url_path)
-            image = image[bbox_y: bbox_y+bbox_width, bbox_x: bbox_x+bbox_width]
+            image = image[
+                bbox_y: bbox_y+bbox_height,
+                bbox_x: bbox_x+bbox_width
+            ]
 
             tesseract_det = tesseract.get_matching_text(image)
             task_y_true = ocr_annotation["text"]

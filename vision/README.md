@@ -11,7 +11,7 @@ Then, clone this repo locally:
 
 ```
 git clone https://github.com/uas-at-ucla/suas-vision
-cd suas-vision
+cd suas-onboard
 ```
 
 Build and run the Docker image:

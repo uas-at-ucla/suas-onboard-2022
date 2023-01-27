@@ -1,9 +1,5 @@
 import time
 
-#import dronekit_sitl
-#sitl = dronekit_sitl.start_default()
-#connection_string = sitl.connection_string()
-
 from dronekit import connect, Command, VehicleMode
 from pymavlink import mavutil
 
@@ -18,6 +14,8 @@ AIRFIELD_ALT = 43.2816 # Airfield is 142 feet MSL
 MIN_RELATIVE_ALT = 22.86 # 75 feet
 MAX_RELATIVE_ALT = 121.92 # 400 feet
 
+TERMINATION_POINT = [38.315339, -76.548108]
+
 # TODO: Use correct connection string for real plane.
 connection_string = "127.0.0.1:14550"
 vehicle = connect(connection_string, wait_ready=True)
@@ -30,6 +28,7 @@ def arm_vehicle():
         print("Waiting for vehicle to arm . . .")
         time.sleep(1)
 
+# Puts the vehicle into AUTO mode.
 def start_mission():
     while vehicle.mode.name != "AUTO":
         vehicle.mode = VehicleMode("AUTO")
@@ -67,15 +66,16 @@ def mission_add_land(landing_point):
     cmds.add(land_command)
     cmds.upload()
 
-# TODO: Generate waypoints from waypoints given during competition.
+# Generate waypoints from waypoints given during competition.
 # Note: Altitudes are given in feet MSL(global)
-def generate_waypoint_list():
-    # Example waypoints: [lat, lon, alt]
-    waypoint0 = [-35.3461613, 149.1574008, 125]
-    waypoint1 = [-35.3369216, 149.1778803, 150]
-    waypoint2 = [-35.3261260, 149.1658642, 175]
-    waypoint3 = [-35.3280343, 149.1424613, 200]
-    waypoint_list = [waypoint0, waypoint1, waypoint2, waypoint3]
+def generate_waypoint_list(filename):
+    # Waypoints format: [lat, lon, alt]
+    waypoint_list = []
+    with open(filename) as f:
+        for line in f:
+            waypoint = line.strip().split(",")
+            waypoint_list.append([float(coord) for coord in waypoint])
+
     for waypoint in waypoint_list:
         # Convert altitude to meters
         waypoint[2] *= METERS_PER_FEET
@@ -107,6 +107,6 @@ cmds.clear()
 cmds.upload()
 
 mission_add_takeoff()
-mission_add_waypoints(generate_waypoint_list())
-mission_add_land([-35.3283464, 149.1399348])
+mission_add_waypoints(generate_waypoint_list("waypoints.txt"))
+mission_add_land(TERMINATION_POINT)
 start_mission()

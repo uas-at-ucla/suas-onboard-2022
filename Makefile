@@ -28,6 +28,5 @@ test:
 coverage:
 	docker compose build && docker compose up -d && \
 		docker exec suas-onboard-vision-web-1 \
-		coverage run -m unittest \
-		coverage html
+		coverage run --source=src -m pytest && coverage report
 	

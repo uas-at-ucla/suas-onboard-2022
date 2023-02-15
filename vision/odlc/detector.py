@@ -303,7 +303,8 @@ def get_top_detections():
             alpha_targets.append({'type': 'dummy'})
 
     # Compute preferences
-    cost_matrix = [[1 - compute_alphanumeric_similarity(alpha_targets[i],alpha_detections[j]) for j in range(n)] for i in range(n)]
+    cost_matrix = [[1 - compute_alphanumeric_similarity(alpha_targets[i], alpha_detections[j]) 
+                    for j in range(n)] for i in range(n)]
 
     row_ind, col_ind = linear_sum_assignment(cost_matrix)
     for i in range(n):

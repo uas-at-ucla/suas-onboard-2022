@@ -8,12 +8,15 @@ import math
 import json
 import time
 import itertools
+import scipy.optimize
 
 import redis
 import numpy as np
 
 import util as util
 from odlc import inference, color_detection, gps, tesseract, shape_detection
+
+
 
 r = redis.Redis(host='redis', port=6379, db=0)
 tolerance = float(os.environ.get('DETECTION_TOLERANCE'))
@@ -303,26 +306,15 @@ def get_top_detections():
             alpha_targets.append({'type': 'dummy'})
 
     # Compute preferences
-    similarity_matrix = [[compute_alphanumeric_similarity(alpha_targets[i],
+    cost_matrix = [[1-compute_alphanumeric_similarity(alpha_targets[i],
                           alpha_detections[j]) for j in range(n)]
                          for i in range(n)]
-
-    ms = 0
-    pairings = [i for i in range(n)]
-    for perm in itertools.permutations(range(n)):
-        s = 0
-        for i in range(n):
-            s += similarity_matrix[i][perm[i]]
-        if s > ms:
-            ms = s
-            pairings = perm
-
+            
+    row_ind, col_ind = scipy.optimize.linear_sum_assignment(cost_matrix)
     for i in range(n):
-        if alpha_targets[i]['type'] != 'dummy' and \
-           alpha_detections[pairings[i]]['type'] != 'dummy':
-            alpha_targets[i]['coords'] = \
-                alpha_detections[pairings[i]]['coords']
-            ret.append(alpha_targets[i])
+        if alpha_targets[row_ind[i]]['type'] != 'dummy' and alpha_detections[col_ind[i]]['type'] != 'dummy':
+            alpha_targets[row_ind[i]]['coords'] = alpha_detections[col_ind[i]]['coords']
+            ret.append(alpha_targets[row_ind[i]])
 
     if debugging:
         util.info(ret)

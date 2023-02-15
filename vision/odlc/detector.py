@@ -7,7 +7,6 @@ import os
 import math
 import json
 import time
-import itertools
 import scipy.optimize
 
 import redis

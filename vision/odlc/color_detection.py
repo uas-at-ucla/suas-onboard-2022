@@ -2,202 +2,83 @@
 Detect text and shape color
 """
 
-import os
 import cv2
 import numpy as np
+from scipy import stats
 
 
 # (color, hue lower bound, hue upper bound)
 COLOR_RANGES = [
-    ('red', 0, 7), ('orange', 8, 19), ('yellow', 20, 32), ('green', 33, 82),
-    ('blue', 83, 122), ('purple', 123, 155), ('red', 156, 180)
+    ('red', 0, 6), ('orange', 7, 22), ('yellow', 23, 32), ('green', 33, 82),
+    ('blue', 83, 126), ('purple', 127, 155), ('red', 156, 180)
 ]
 
 
-# Input image should be cropped so that
-# the image only contains one target.
-# Draw contours on the image. Filter out
-# shadows and small contours of noise, leaving
-# behind just the shape, text, and any holes
-# in the text. Then just calculate the median
-# color of the text and the shape.
+# Perform kmeans clustering on an image
+# and return the clustered image
+def kmeans(img, mask=None):
+
+    # Array of truthy values
+    if mask is None:
+        mask = np.ones(img.shape[0:2], dtype=bool)
+
+    V = np.float32(img.reshape(-1, 3))[mask.flatten()]
+
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+    _, labels, centers = cv2.kmeans(V, 2, None, criteria, 10,
+                                    cv2.KMEANS_PP_CENTERS)
+    centers = np.uint8(centers)
+    res = centers[labels.flatten()]
+
+    clustered = np.zeros_like(img.reshape(-1, 3))
+    clustered[mask.flatten()] = res
+
+    clustered = np.uint8(clustered).reshape(img.shape)
+
+    return clustered
 
 
-# @param img_path: cropped image filepath
-# @return tuple of color names: (text color, shape color)
+# Return a mask of all pixels in the image matching the specified color
+def get_mask_from_color(img, color):
+    mask = np.all(img.reshape(-1, 3) == color, axis=1)
+    mask = mask.reshape(img.shape[0:2])
+    mask = np.uint8(mask)
+
+    return mask
 
 
-def get_text_and_shape_color(img):
+# Return the average distance from the center
+# of all nonzero pixels in the image
+def avg_dist(mask, center):
+    mask_points = np.transpose(mask.nonzero())
+    if not len(mask_points):
+        return 0
 
-    # Convert image to RGB since OpenCV reads images in BGR
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    distance = sum(np.linalg.norm(point - center) for point in mask_points)
 
-    SIZE_REQ = int(os.environ.get('MIN_DILATION_SIZE'))
-    meets_size_req = min([img.shape[0], img.shape[1]]) > SIZE_REQ
-
-    if not meets_size_req:
-        # Upscale by a factor of 2
-        img = cv2.resize(img, None, fx=2, fy=2, interpolation=cv2.INTER_AREA)
-
-    # Slight blur to remove noise in text pixels
-    img = cv2.GaussianBlur(img, (3, 3), 0)
-
-    # ------ DRAWING CONTOURS ------ #
-
-    # Now we will draw contours around each object in the image
-    # e.g. contours for the shape and text
-
-    canny = cv2.Canny(img, 100, 150)
-
-    # Expand the object outlines to ensure that they are connected.
-    # If the image is big enough, we'll just morph the whole thing.
-    if meets_size_req:
-        kernel = np.ones((2, 2), np.uint8)
-        canny = cv2.dilate(canny, kernel)
-
-    # If the image is too small, morphing may connect object outlines.
-    # In this case, we separate the contours that are already connected
-    # and those that aren't. We then apply morphology to each group
-    # independently so that they don't connect to one another
-    else:
-        cnts, _ = cv2.findContours(canny, cv2.RETR_CCOMP,
-                                   cv2.CHAIN_APPROX_SIMPLE)
-        cnts = np.array(cnts, dtype=object)
-
-        areas = np.vectorize(cv2.contourArea)
-        perimeters = np.vectorize(cv2.arcLength)
-
-        loose = cnts[perimeters(cnts, True) * 2 > areas(cnts)]
-        cnncted = cnts[perimeters(cnts, True) * 2 < areas(cnts)]
-
-        loose_cnts = cv2.drawContours(np.zeros_like(canny), loose, -1, 255, 1)
-        cnncted_cnts = cv2.drawContours(np.zeros_like(canny),
-                                        cnncted, -1, 255, 1)
-
-        kernel = np.ones((2, 2), np.uint8)
-        cnncted_cnts = cv2.morphologyEx(cnncted_cnts, cv2.MORPH_CLOSE, kernel)
-        loose_cnts = cv2.morphologyEx(loose_cnts, cv2.MORPH_CLOSE, kernel)
-
-        canny = np.bitwise_or(loose_cnts.astype(int), cnncted_cnts.astype(int))
-        canny = np.uint8(canny)
-
-    # Find the contours
-    contours, hierarchy = cv2.findContours(canny, cv2.RETR_CCOMP,
-                                           cv2.CHAIN_APPROX_SIMPLE)
-
-    # Some basic reformatting to make things easier
-    contours = np.array(contours, dtype=object)
-    hierarchy = hierarchy[0]
-
-    # ------ REMOVING CONTOURS OF SHADOWS AND SMALL NOISE ------ #
-
-    final_contours = []
-
-    # Loop through the different hierarchy levels,
-    # skipping the -1 level since it contains the outer edge contours
-    # and we only want the inner edge contours.
-
-    # This removes the shadows since the outer edge
-    # draws a contour around both the shadow and shape,
-    # but the inner edge will draw one contour for the shape
-    # and a separate one for the shadow.
-    # We then eliminate the shadow by looking at
-    # all the contours along the inner edge
-    # and taking the contour with the largest area
-    # (which also removes the small contours of noise).
-
-    # get the different levels so we can loop through them
-    levels = np.unique(hierarchy[:, 3])
-
-    # skip the first level (-1)
-    for level in levels[1::]:
-
-        # get the contours of the current level
-        cnts = contours[hierarchy[:, 3] == level]
-
-        # Add the contour with the largest area to the contour list
-        largest = max(cnts, key=cv2.contourArea)
-
-        # even kernel sizes shift contours
-        # so we translate it up 1, left 1 to reverse it
-        largest -= [1, 1]
-
-        final_contours.append(largest)
-
-    # Sort contours with the outer layers first and the inner layers last
-    final_contours = sorted(final_contours, key=cv2.contourArea, reverse=True)
-
-    # ------ MASKING ------ #
-
-    empty_img = np.zeros(img.shape[0:2])
-
-    # Draw the masks. The first (outermost) contour is the shape.
-    # The next outermost contour is the text.
-    shape_mask = cv2.drawContours(empty_img.copy(), final_contours, 0, 255, -1)
-    text_mask = cv2.drawContours(empty_img.copy(), final_contours, 1, 255, -1)
-
-    # Any additional contours are holes
-    # Loop through additional contours and remove them from the text
-    for i in range(2, len(final_contours)):
-
-        hole_mask = cv2.drawContours(empty_img.copy(),
-                                     final_contours, i, 255, -1)
-
-        # Remove the hole mask from the text mask
-        text_mask = np.logical_xor(text_mask, hole_mask)
-
-    # Remove the text mask from the shape mask
-    shape_mask = np.logical_xor(shape_mask, text_mask)
-
-    # reformat
-    shape_mask = np.uint8(shape_mask)
-    text_mask = np.uint8(text_mask)
-
-    # Clean both masks by eroding
-    shape_mask = cv2.erode(shape_mask, kernel, iterations=2)
-    text_mask = cv2.erode(text_mask, kernel, iterations=2)
-
-    # Use the mask on the color image to extract the pixels
-    shape_pixels = cv2.bitwise_and(img, img, mask=shape_mask)
-    text_pixels = cv2.bitwise_and(img, img, mask=text_mask)
-
-    # ------ COLOR EXTRACTION ------ #
-
-    # reshape into just an array of pixels
-    shape_pixels = shape_pixels.reshape(-1, 3)
-    text_pixels = text_pixels.reshape(-1, 3)
-
-    # Extract the pixels that aren't empty
-    shape_pixels = shape_pixels[np.any(shape_pixels, axis=1)]
-    text_pixels = text_pixels[np.any(text_pixels, axis=1)]
-
-    # Compute the median color
-    # since median is more robust than mean
-    shape_rgb = np.median(shape_pixels, axis=0)
-    text_rgb = np.median(text_pixels, axis=0)
-
-    # Get the color name
-    shape_color = color_name(shape_rgb)
-    text_color = color_name(text_rgb)
-
-    return (text_color, shape_color)
+    return distance / len(mask_points)
 
 
+# Match an rgb code to a color name
 def color_name(rgb):
-    # color conversions
-    hsv = cv2.cvtColor(np.uint8([[rgb]]), cv2.COLOR_RGB2HSV)[0][0]
+    # h ranges from 0 to 180, l and s range from 0 to 255
     hls = cv2.cvtColor(np.uint8([[rgb]]), cv2.COLOR_RGB2HLS)[0][0]
+
+    # l, a, and b range from 0 to 255
     lab = cv2.cvtColor(np.uint8([[rgb]]), cv2.COLOR_RGB2LAB)[0][0]
 
-    # TODO: BROWN DETECTION
-
-    # black detection: lightness <= 50
-    if hls[1] <= 50:
+    # black detection: lightness <= 40
+    if hls[1] <= 40:
         return 'black'
 
     # white detection: lightness >= 215
     if hls[1] >= 215:
         return 'white'
+
+    # brown detection: values obtained through testing
+    b_lower_bound = max([1192-8*lab[1], 132, lab[1]-20])
+    if (lab[0] <= 127.5) and (lab[1] <= 160.5) and (lab[2] >= b_lower_bound):
+        return "brown"
 
     # gray detection: a* and b* are close to neutral(128)
     if 118 <= lab[1] <= 138 and 118 <= lab[2] <= 138:
@@ -205,5 +86,148 @@ def color_name(rgb):
 
     # general color detection, looping through color ranges
     for color in COLOR_RANGES:
-        if color[1] <= hsv[0] <= color[2]:
+        if color[1] <= hls[0] <= color[2]:
             return color[0]
+
+
+# Perform kmeans clustering to extract the object
+# Then cluster repeatedly until text and shape are separated
+# Extract the median color and rnn a color detection algorithm
+# to detect the color
+def get_text_and_shape_color(image):
+
+    # Change to RGB
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+    # ---------- EXTRACT OBJECT MASK ---------- #
+
+    blurred = cv2.GaussianBlur(image, (7, 7), 0)
+    clustered_img = kmeans(blurred)
+
+    # Extract the background color
+    border = np.concatenate((clustered_img[0], clustered_img[-1],
+                            clustered_img[:, 0], clustered_img[:, -1]))
+    bg_color = stats.mode(border, keepdims=True)[0][0]
+
+    # Exclude the background color
+    cluster_mask = np.logical_xor(np.ones(image.shape[0:2]),
+                                  get_mask_from_color(clustered_img, bg_color))
+    cluster_mask = np.uint8(cluster_mask)
+
+    # Fill it in by taking the largest contour
+
+    # First dilate it
+    kernel = np.ones((3, 3), np.uint8)
+    cluster_mask = cv2.dilate(cluster_mask, kernel)
+
+    kernel = np.ones((5, 5), np.uint8)
+    cluster_mask = cv2.morphologyEx(cluster_mask, cv2.MORPH_CLOSE, kernel)
+
+    # Then contour it
+    contours, _ = cv2.findContours(cluster_mask, cv2.RETR_TREE,
+                                   cv2.CHAIN_APPROX_SIMPLE)
+    largest = max(contours, key=cv2.contourArea)
+
+    cluster_mask = cv2.drawContours(np.zeros(image.shape[0:2]),
+                                    [largest], -1, 255, -1)
+    cluster_mask = np.uint8(cluster_mask)
+
+    # erode the cluster mask
+    kernel = np.ones((5, 5), np.uint8)
+    cluster_mask = cv2.erode(cluster_mask, kernel)
+
+    cluster_mask = cluster_mask.astype(bool)
+
+    # ---------- EXTRACT TEXT MASK AND SHAPE MASK ---------- #
+
+    # Calculate mask center using contour moments
+    M = cv2.moments(np.uint8(cluster_mask))
+    cX = int(M["m10"] / M["m00"])
+    cY = int(M["m01"] / M["m00"])
+    center = np.array([cY, cX])
+
+    # Extract the text and shape masks
+    shape_mask = np.zeros_like(cluster_mask)
+    text_mask = np.zeros_like(cluster_mask)
+
+    # count iterations just in case
+    it = 0
+
+    # Repeat this process until the text is closer to the mask center
+    while avg_dist(text_mask, center) >= avg_dist(shape_mask, center) \
+            and it < 5:
+
+        # Remove the text and repeat the cluster process each time
+        # For the first iteration, the text mask is empty
+        cluster_mask = np.logical_xor(cluster_mask, text_mask)
+
+        # Cluster
+        clustered_img = kmeans(blurred, mask=cluster_mask)
+        clustered_pixels = clustered_img.reshape(-1, 3)[cluster_mask.flatten()]
+
+        # Extract the masks
+        shape_color = stats.mode(clustered_pixels, keepdims=True)[0][0]
+
+        # If the shape color was (0, 0, 0), which would match the background
+        if np.array_equal(shape_color, (0, 0, 0)):
+            clustered_img[np.all(clustered_img == shape_color, axis=2) &
+                          (cluster_mask)] += 1
+            shape_color += 1
+
+        shape_mask = get_mask_from_color(clustered_img, shape_color)
+        text_mask = np.logical_xor(cluster_mask, shape_mask)
+        text_mask = np.uint8(text_mask)
+
+        # take the largest contour from the text
+        cnts, _ = cv2.findContours(text_mask, cv2.RETR_TREE,
+                                   cv2.CHAIN_APPROX_SIMPLE)
+        largest = cv2.drawContours(np.zeros(image.shape[0:2]),
+                                   [max(cnts, key=cv2.contourArea)],
+                                   -1, 255, -1)
+
+        # Take the intersection of the largest and the text mask
+        text_mask = cv2.bitwise_and(text_mask, text_mask,
+                                    mask=np.uint8(largest))
+        text_mask = np.uint8(text_mask)
+
+        # Calculate mask center using contour moments for next iteration
+        M = cv2.moments(np.uint8(cluster_mask))
+        cX = int(M["m10"] / M["m00"])
+        cY = int(M["m01"] / M["m00"])
+        center = np.array([cY, cX])
+
+        it += 1
+
+    if (it == 5):
+        print("ERROR. WHILE LOOP RUN TOO MAY TIMES")
+
+    # ---------- MASK CLEANUP + PIXEL EXTRACTION --------- #
+    # Try eroding with 5x5 kernel
+    if cv2.erode(text_mask, np.ones((5, 5), np.uint8)).any():
+        text_mask = cv2.erode(text_mask, np.ones((5, 5), np.uint8))
+
+    # Otherwise erode with 3x3 kernel
+    elif cv2.erode(text_mask, np.ones((3, 3), np.uint8)).any():
+        text_mask = cv2.erode(text_mask, np.ones((3, 3), np.uint8))
+
+    # Otherwise no erosion
+
+    # Extract the pixels
+    shape_pixels = cv2.bitwise_and(image, image, mask=shape_mask)
+    shape_pixels = shape_pixels.reshape(-1, 3)
+
+    text_pixels = cv2.bitwise_and(image, image, mask=text_mask)
+    text_pixels = text_pixels.reshape(-1, 3)
+
+    # Get median color
+    text_pixels = text_pixels[np.any(text_pixels, axis=1)]
+    text_rgb = np.median(text_pixels, axis=0)
+
+    shape_pixels = shape_pixels[np.any(shape_pixels, axis=1)]
+    shape_rgb = np.median(shape_pixels, axis=0)
+
+    # Get color name
+    text_color = color_name(text_rgb)
+    shape_color = color_name(shape_rgb)
+
+    return (text_color, shape_color)

@@ -6,6 +6,8 @@ import cv2
 import numpy as np
 from scipy import stats
 
+import util
+
 
 # (color, hue lower bound, hue upper bound)
 COLOR_RANGES = [
@@ -198,8 +200,14 @@ def get_text_and_shape_color(image):
 
         it += 1
 
+    # Logging
     if (it == 5):
-        print("ERROR. WHILE LOOP RUN TOO MAY TIMES")
+        util.error("ERROR. WHILE LOOP RUN TOO MAY TIMES")
+
+    util.debug_imwrite(text_mask,
+                       f"./images/debug/text-mask-{time.time()}.jpg")
+    util.debug_imwrite(shape_mask,
+                       f"./images/debug/shape-mask-{time.time()}.jpg")
 
     # ---------- MASK CLEANUP + PIXEL EXTRACTION --------- #
     # Try eroding with 5x5 kernel

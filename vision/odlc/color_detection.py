@@ -41,20 +41,11 @@ def kmeans(img, mask=None):
     return clustered
 
 
-# Return a mask of all pixels in the image matching the specified color
-def get_mask_from_color(img, color):
-    mask = np.all(img.reshape(-1, 3) == color, axis=1)
-    mask = mask.reshape(img.shape[0:2])
-    mask = np.uint8(mask)
-
-    return mask
-
-
 # Return the average distance from the center
 # of all nonzero pixels in the image
 def avg_dist(mask, center):
     mask_points = np.transpose(mask.nonzero())
-    if not len(mask_points):
+    if len(mask_points) == 0:
         return 0
 
     distance = sum(np.linalg.norm(point - center) for point in mask_points)
@@ -113,8 +104,8 @@ def get_text_and_shape_color(image):
     bg_color = stats.mode(border, keepdims=True)[0][0]
 
     # Exclude the background color
-    cluster_mask = np.logical_xor(np.ones(image.shape[0:2]),
-                                  get_mask_from_color(clustered_img, bg_color))
+    cluster_mask = np.all(clustered_img == bg_color, axis=2)
+    cluster_mask = np.logical_xor(np.ones(image.shape[0:2]), cluster_mask)
     cluster_mask = np.uint8(cluster_mask)
 
     # Fill it in by taking the largest contour
@@ -149,7 +140,6 @@ def get_text_and_shape_color(image):
     cY = int(M["m01"] / M["m00"])
     center = np.array([cY, cX])
 
-    # Extract the text and shape masks
     shape_mask = np.zeros_like(cluster_mask)
     text_mask = np.zeros_like(cluster_mask)
 
@@ -177,7 +167,7 @@ def get_text_and_shape_color(image):
                           (cluster_mask)] += 1
             shape_color += 1
 
-        shape_mask = get_mask_from_color(clustered_img, shape_color)
+        shape_mask = np.all(clustered_img == shape_color, axis=2)
         text_mask = np.logical_xor(cluster_mask, shape_mask)
         text_mask = np.uint8(text_mask)
 
@@ -191,7 +181,9 @@ def get_text_and_shape_color(image):
         # Take the intersection of the largest and the text mask
         text_mask = cv2.bitwise_and(text_mask, text_mask,
                                     mask=np.uint8(largest))
+
         text_mask = np.uint8(text_mask)
+        shape_mask = np.uint8(shape_mask)
 
         # Calculate mask center using contour moments for next iteration
         M = cv2.moments(np.uint8(cluster_mask))
@@ -203,7 +195,7 @@ def get_text_and_shape_color(image):
 
     # Logging
     if (it == 5):
-        util.error("ERROR. WHILE LOOP RUN TOO MAY TIMES")
+        util.error("COLOR DETECTION: WHILE LOOP RUN TOO MAY TIMES")
 
     util.debug_imwrite(text_mask,
                        f"./images/debug/text-mask-{time.time()}.jpg")

@@ -104,8 +104,7 @@ def get_text_and_shape_color(image):
     bg_color = stats.mode(border, keepdims=True)[0][0]
 
     # Exclude the background color
-    cluster_mask = np.all(clustered_img == bg_color, axis=2)
-    cluster_mask = np.logical_xor(np.ones(image.shape[0:2]), cluster_mask)
+    cluster_mask = np.all(clustered_img != bg_color, axis=2)
     cluster_mask = np.uint8(cluster_mask)
 
     # Fill it in by taking the largest contour

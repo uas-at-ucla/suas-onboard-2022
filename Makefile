@@ -27,6 +27,6 @@ test:
 
 coverage:
 	docker compose build && docker compose up -d && \
-		docker exec suas-onboard-vision-web-1 \
-		coverage run --source=src -m pytest && coverage report
+		docker exec suas-onboard-vision-web-1 bash -c \
+		"coverage run -m unittest; coverage report -i"
 	

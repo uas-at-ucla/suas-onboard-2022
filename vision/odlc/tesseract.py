@@ -4,13 +4,53 @@ Light wrapper around Tesseract OCR model
 
 import pytesseract
 import cv2
-import time
+import os
+from functools import reduce
+from odlc.image_processing import noise_removal, thick_font, \
+    filter_contour, extract_images_from_contour, cropped_images_to_binary, \
+    image_with_border, average_color_contour
 
-import util
-from odlc.cropper import crop_shape, crop_image_alpha
 
-# Assumes that the cropped image contains a single alphanumeric character
-# Takes the image, deskews, binarizes, pads image
+def generate_predictions(image):
+    output = []
+    image = image_with_border(image)
+
+    for _ in range(0, 4):
+        # get tesseract data from the image
+        # we are interested in the recognized letter and its confidence
+        if os.getenv("DEBUG"):
+            cv2.imwrite("./images/debug/img-rotate{}.png".format(_), image)
+        config_str = '--psm 10 -c tessedit_char_whitelist'
+        config_str += '=ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
+        data = pytesseract.image_to_data(
+            image,
+            config=config_str,
+            output_type="data.frame"
+        )
+        # using pandas, get the row with confidence greater than 0
+        letter_row = data[data["conf"] > 0]
+        # reset index of pandas series
+        letter_row = letter_row.reset_index()
+        # get the recognized letter and its confidence, add to output list
+        if not letter_row.empty:
+            letter = letter_row["text"][0]
+            confidence = letter_row["conf"][0]
+            output.append((letter, confidence))
+
+        # rotate image by 90 degrees for next pass
+        image = cv2.rotate(image, cv2.ROTATE_90_COUNTERCLOCKWISE)
+    return output
+
+
+def combine_similar_predictions(predictions):
+    seen_characters = {}
+    for prediction in predictions:
+        if prediction[0] in seen_characters:
+            seen_characters[prediction[0]] += prediction[1]
+        else:
+            seen_characters[prediction[0]] = prediction[1]
+    return list(seen_characters.items())
+
 # Outputs a list of tuples containing a predicted character and confidence
 # Ideally, the maximum confidence character is the true character, but
 # if that character does not match any of the alphanumeric targets,
@@ -20,135 +60,81 @@ from odlc.cropper import crop_shape, crop_image_alpha
 
 
 def get_matching_text(image):
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)  # grayscale
+    og_image = image.copy()
+    # TODO: automatted contrast correcting
+    # between 1-3
+    contrast_multiplier = 2
+    # between 0 - 100
+    brightness_multiplier = 0
+    image = cv2.convertScaleAbs(image, alpha=contrast_multiplier,
+                                beta=brightness_multiplier)
 
-    # Binarizes text such that foreground becomes 255, background becomes 0
-    # Binarization is conducted via openCV THRESH_OTSU (Otsu's method)
-    image = cv2.threshold(image, 0, 255,
-                          cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    image = cv2.GaussianBlur(image, (5, 5), 0)
 
-    # add padding to image such that rotation can occur without cutting out
-    # image since minAreaRect can return negative indices in some cases
+    if os.getenv("DEBUG"):
+        cv2.imwrite('./images/debug/img-ocr_blur.png', image)
 
-    width, height = image.shape[:2]  # get height, width of image
+    image = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                  cv2.THRESH_BINARY, 7, 1)
 
-    # Given that the paper is white, the image we receive contains
-    # a background, a white rectangle (could be rotated),
-    # and the letter. Once we binarize, each non-black pixel
-    # in the background should be made black
-    # Thus, we loop through each pixel in
-    # the image and until we find our first black, we set
-    # every pixel up to that point to black
-    # this leaves us with the desired image with white text
-    # and a black background
-    for h in range(0, height):
-        for w in range(0, width):
-            if (image[w][h] != 0):
-                image[w][h] = 0
-            else:
-                break
-        for w in reversed(range(width)):
-            if (image[w][h] != 0):
-                image[w][h] = 0
-            else:
-                break
+    if os.getenv("DEBUG"):
+        cv2.imwrite('./images/debug/img-ocr_post_threshold.png', image)
 
-    # testing the case when we get a really good crop
-    # then the hierachal contour selection isn't needed
-    config_str = '--psm 10 -c tessedit_char_whitelist'
-    config_str += '=ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
-    good_crop = crop_image_alpha(image)
+    image = noise_removal(image)
 
-    width, height = good_crop.shape[:2]
-    center = (width // 2, height // 2)  # compute the approximate center
-    # After image is rotated, there are 4 cases: text is right side up
-    # text is rotated 90 degrees, 180 degrees, or 270 degrees
+    image = thick_font(image)
 
-    rotation_matrix_ninety = cv2.getRotationMatrix2D(center, 90, 1.0)
-    output = []
+    if os.getenv("DEBUG"):
+        cv2.imwrite('./images/debug/img-noise_removed.png', image)
 
-    for _ in range(0, 4):
+    contours, _ = cv2.findContours(image, cv2.RETR_TREE,
+                                   cv2.CHAIN_APPROX_SIMPLE)
 
-        # get tesseract data from the image
-        # we are interested in the recognized letter and its confidence
-        config_str = '--psm 10 -c tessedit_char_whitelist'
-        config_str += '=ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
-        data = pytesseract.image_to_data(
-            good_crop,
-            config=config_str,
-            output_type="data.frame"
-        )
-        # using pandas, get the row with confidence greater than 0
-        letter_row = data[data["conf"] > 0]
-        # reset index of pandas series
-        letter_row = letter_row.reset_index()
-        # get the recognized letter and its confidence, add to output list
-        if not letter_row.empty:
-            letter = letter_row["text"][0]
-            confidence = letter_row["conf"][0]
-            output.append((letter, confidence))
+    if os.getenv("DEBUG"):
+        all_contours_image = cv2.drawContours(og_image.copy(), contours, -1,
+                                              (0, 255, 0), 3)
+        cv2.imwrite('./images/debug/img-all_contours.png', all_contours_image)
 
-        # rotate image by 90 degrees for next pass
-        good_crop = cv2.warpAffine(
-            good_crop,
-            rotation_matrix_ninety,
-            (width, height),
-            flags=cv2.INTER_CUBIC,
-            borderMode=cv2.BORDER_REPLICATE)
-    # TODO: do the other one based on confidence instead
-    image = crop_shape(image)
+    image_height = image.shape[0]
+    image_width = image.shape[1]
 
-    # Returns coordinates of all white pixels (text pixels)
-    # OpenCV provides a method which returns the minimum area rectangle
-    # containing the coordinates. The final element of this Box2D object
-    # is the angle of the rectangle, hence we assign that to angle
-    # get the height and width of the image
-    width, height = image.shape[:2]
-    center = (width // 2, height // 2)  # compute the approximate center
-    # After image is rotated, there are 4 cases: text is right side up
-    # text is rotated 90 degrees, 180 degrees, or 270 degrees
+    contours = filter_contour(contours, image_height, image_width)
 
-    rotation_matrix_ninety = cv2.getRotationMatrix2D(center, 90, 1.0)
+    if os.getenv("DEBUG"):
+        filtered_contour = cv2.drawContours(og_image.copy(), contours, -1,
+                                            (0, 255, 0), 3)
+        cv2.imwrite('./images/debug/img-filtered_contours.png',
+                    filtered_contour)
 
-    # Save the preprocessed image if we are debugging
-    util.debug_imwrite(image, f"./images/debug/img-ocr-{time.time()}.png")
+    mean_contour_pixel_values = list(map(
+        lambda contour: average_color_contour(contour, og_image),
+        contours))
 
-    # we check if a letter is detected in every case (right way up, upside
-    # down, 90 degrees left, 90 degrees right)
-    for i in range(0, 4):
+    # og_image = cv2.cvtColor(og_image, cv2.COLOR_BGR2GRAY)
+    cropped_images = extract_images_from_contour(og_image, contours)
+    k_means_images = []
+    # k_means_images = cropped_images
+    for index, crop_image in enumerate(cropped_images):
+        k_means_images.append(cropped_images_to_binary(
+            crop_image,
+            mean_contour_pixel_values[index]))
 
-        # get tesseract data from the image
-        # we are interested in the recognized letter and its confidence
-        config_str = '--psm 10 -c tessedit_char_whitelist'
-        config_str += '=ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
-        data = pytesseract.image_to_data(
-            image,
-            config=config_str,
-            output_type="data.frame"
-        )
-        # using pandas, get the row with confidence greater than 0
-        letter_row = data[data["conf"] > 0]
-        # reset index of pandas series
-        letter_row = letter_row.reset_index()
-        # get the recognized letter and its confidence, add to output list
-        if not letter_row.empty:
-            letter = letter_row["text"][0]
-            confidence = letter_row["conf"][0]
-            output.append((letter, confidence))
-
-        # rotate image by 90 degrees for next pass
-        image = cv2.warpAffine(
-            image,
-            rotation_matrix_ninety,
-            (width, height),
-            flags=cv2.INTER_CUBIC,
-            borderMode=cv2.BORDER_REPLICATE)
-
-    # make sure output list of tuples is sorted in
-    # decreasing order by confidence
-    output = sorted(output, key=lambda x: x[1], reverse=True)
-
-    return output
+    if os.getenv("DEBUG"):
+        for index, crop_image in enumerate(k_means_images):
+            cv2.imwrite('./images/debug/crops/{}.png'.format(index),
+                        crop_image)
+    predictions = list(map(
+        lambda crop_image: generate_predictions(crop_image),
+        k_means_images))
+    predictions = reduce(
+        lambda prediction_a, prediction_b: prediction_a + prediction_b,
+        predictions)
+    predictions = combine_similar_predictions(predictions)
+    predictions = sorted(
+        predictions,
+        key=lambda prediction: prediction[1], reverse=True)
+    return predictions
 
 
 # TODO: unit testing for various characters, background colors/shapes, add

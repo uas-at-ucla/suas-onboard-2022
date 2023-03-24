@@ -9,3 +9,5 @@ vision/odlc/models/*.pth
 vision/images/debug/*.png
 vision/images/debug/*.jpg
 vision/images/debug/*.jpeg
+*.DS_STORE*
+.coverage*

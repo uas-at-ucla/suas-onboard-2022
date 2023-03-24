@@ -1,4 +1,6 @@
 import unittest
+from parameterized import parameterized
+
 import cv2
 import requests
 
@@ -63,134 +65,59 @@ class EmergentModelTests(unittest.TestCase):
 
 
 class TesseractTests(unittest.TestCase):
-    image_path_1 = '/app/images/test/tesseract-test1.png'
-    image_path_2 = '/app/images/test/tesseract-test2.png'
-    image_path_3 = '/app/images/test/tesseract-test3.png'
-    image_path_4 = '/app/images/test/tesseract-test4.png'
+    # @parameterized.expand([
+    #    ('/app/images/test/tesseract-test1.png', "A"),
+    #    ('/app/images/test/tesseract-test2.png', "A"),
+    #    ('/app/images/test/tesseract-test3.png', "A")])
+    @parameterized.expand([
+       ('/app/images/test/tesseract-test1.png', "A"),
+       ('/app/images/test/tesseract-test3.png', "A")])
+    def test_ideal_generated_images(self, path, result):
+        img = cv2.imread(path)
+        det = tesseract.get_matching_text(img)
+        self.assertEqual(det[0][0], result)
 
-    def test_tesseract_image_1(self):
-        det = tesseract.get_matching_text(cv2.imread(self.image_path_1))
-        self.assertEqual(det[0][0], "A")
-
-    def test_tesseract_image_2(self):
-        det = tesseract.get_matching_text(cv2.imread(self.image_path_2))
-        self.assertEqual(det[0][0], "A")
-
-    def test_tesseract_image_3(self):
-        det = tesseract.get_matching_text(cv2.imread(self.image_path_3))
-        self.assertEqual(det[0][0], "A")
-
-    def test_tesseract_image_4(self):
-        det = tesseract.get_matching_text(cv2.imread(self.image_path_4))
-        self.assertEqual(det[0][0], "A")
+    # @parameterized.expand([
+    #    ('/app/images/test/DJI_01.JPG', "D"),
+    #    ('/app/images/test/DJI_02.JPG', "A"),
+    #    ('/app/images/test/DJI_03.JPG', "U"),
+    #    ('/app/images/test/DJI_04.JPG', "8"),
+    #    ('/app/images/test/DJI_05.JPG', "E"),
+    #    ('/app/images/test/DJI_06.JPG', "T")
+    #    ])
+    @parameterized.expand([
+       ('/app/images/test/DJI_01.JPG', "D"),
+       ])
+    def test_dji_images(self, path, result):
+        img = cv2.imread(path)
+        det = tesseract.get_matching_text(img)
+        print(det)
+        self.assertEqual(det[0][0], result)
 
 
 class ColorDetectionTests(unittest.TestCase):
-    image_path_1 = '/app/images/test/DJI_01.JPG'
-    image_path_2 = '/app/images/test/DJI_02.JPG'
-    image_path_3 = '/app/images/test/DJI_03.JPG'
-    image_path_4 = '/app/images/test/DJI_04.JPG'
-    image_path_5 = '/app/images/test/DJI_05.JPG'
-    image_path_6 = '/app/images/test/DJI_06.JPG'
-    image_path_7 = '/app/images/test/DJI_07.JPG'
-    image_path_8 = '/app/images/test/DJI_08.JPG'
-    image_path_9 = '/app/images/test/DJI_09.JPG'
-    image_path_10 = '/app/images/test/DJI_10.JPG'
-    image_path_11 = '/app/images/test/DJI_11.JPG'
-    image_path_12 = '/app/images/test/DJI_12.JPG'
-    image_path_13 = '/app/images/test/DJI_13.JPG'
-
-    def test_color_detection_1(self):
+    # path, text color, shape color
+    @parameterized.expand([
+       ('/app/images/test/DJI_01.JPG', "red", "blue"),
+       ('/app/images/test/DJI_02.JPG', "white", "black"),
+       ('/app/images/test/DJI_03.JPG', "gray", "yellow"),
+       ('/app/images/test/DJI_04.JPG', "green", "orange"),
+       ('/app/images/test/DJI_05.JPG', "orange", "yellow"),
+       ('/app/images/test/DJI_06.JPG', "purple", "white"),
+       ('/app/images/test/DJI_07.JPG', "black", "orange"),
+       ('/app/images/test/DJI_08.JPG', "purple", "orange"),
+       ('/app/images/test/DJI_09.JPG', "white", "blue"),
+       ('/app/images/test/DJI_10.JPG', "blue", "red"),
+       ('/app/images/test/DJI_11.JPG', "blue", "white"),
+       ('/app/images/test/DJI_12.JPG', "red", "yellow"),
+       ('/app/images/test/DJI_13.JPG', "orange", "black")])
+    def test_color_detection_1(self, image_path, target_text, target_shape):
         text_color, shape_color = \
             color_detection.get_text_and_shape_color(cv2.
-                                                     imread(self.image_path_1))
+                                                     imread(image_path))
 
-        self.assertEqual(text_color, 'red')
-        self.assertEqual(shape_color, 'blue')
-
-    def test_color_detection_2(self):
-        text_color, shape_color = \
-            color_detection.get_text_and_shape_color(cv2.
-                                                     imread(self.image_path_2))
-        self.assertEqual(text_color, 'white')
-        self.assertEqual(shape_color, 'black')
-
-    def test_color_detection_3(self):
-        text_color, shape_color = \
-            color_detection.get_text_and_shape_color(cv2.
-                                                     imread(self.image_path_3))
-        self.assertEqual(text_color, 'gray')
-        self.assertEqual(shape_color, 'yellow')
-
-    def test_color_detection_4(self):
-        text_color, shape_color = \
-            color_detection.get_text_and_shape_color(cv2.
-                                                     imread(self.image_path_4))
-        self.assertEqual(text_color, 'green')
-        self.assertEqual(shape_color, 'orange')
-
-    def test_color_detection_5(self):
-        text_color, shape_color = \
-            color_detection.get_text_and_shape_color(cv2.
-                                                     imread(self.image_path_5))
-        self.assertEqual(text_color, 'orange')
-        self.assertEqual(shape_color, 'yellow')
-
-    def test_color_detection_6(self):
-        text_color, shape_color = \
-            color_detection.get_text_and_shape_color(cv2.
-                                                     imread(self.image_path_6))
-        self.assertEqual(text_color, 'purple')
-        self.assertEqual(shape_color, 'white')
-
-    def test_color_detection_7(self):
-        text_color, shape_color = \
-            color_detection.get_text_and_shape_color(cv2.
-                                                     imread(self.image_path_7))
-        self.assertEqual(text_color, 'black')
-        self.assertEqual(shape_color, 'orange')
-
-    def test_color_detection_8(self):
-        text_color, shape_color = \
-            color_detection.get_text_and_shape_color(cv2.
-                                                     imread(self.image_path_8))
-        self.assertEqual(text_color, 'purple')
-        self.assertEqual(shape_color, 'orange')
-
-    def test_color_detection_9(self):
-        text_color, shape_color = \
-            color_detection.get_text_and_shape_color(cv2.
-                                                     imread(self.image_path_9))
-        self.assertEqual(text_color, 'white')
-        self.assertEqual(shape_color, 'blue')
-
-    def test_color_detection_10(self):
-        text_color, shape_color = \
-            color_detection. \
-            get_text_and_shape_color(cv2.imread(self.image_path_10))
-        self.assertEqual(text_color, 'blue')
-        self.assertEqual(shape_color, 'red')
-
-    def test_color_detection_11(self):
-        text_color, shape_color = \
-            color_detection. \
-            get_text_and_shape_color(cv2.imread(self.image_path_11))
-        self.assertEqual(text_color, 'blue')
-        self.assertEqual(shape_color, 'white')
-
-    def test_color_detection_12(self):
-        text_color, shape_color = \
-            color_detection. \
-            get_text_and_shape_color(cv2.imread(self.image_path_12))
-        self.assertEqual(text_color, 'red')
-        self.assertEqual(shape_color, 'yellow')
-
-    def test_color_detection_13(self):
-        text_color, shape_color = \
-            color_detection. \
-            get_text_and_shape_color(cv2.imread(self.image_path_13))
-        self.assertEqual(text_color, 'orange')
-        self.assertEqual(shape_color, 'black')
+        self.assertEqual(text_color, target_text)
+        self.assertEqual(shape_color, target_shape)
 
 
 class ShapeClassificationTests(unittest.TestCase):

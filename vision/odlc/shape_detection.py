@@ -7,8 +7,10 @@ import json
 import cv2
 import numpy as np
 import redis
+from PIL import Image, ImageFilter
 
 import util
+from odlc.segmentation import get_text_and_shape_mask
 
 r = redis.Redis(host='redis', port=6379, db=0)
 granularity = int(os.environ.get('POLAR_SHAPE_GRANULARITY'))
@@ -53,38 +55,32 @@ def initialize(targets):
 
 
 def detect_shape(img):
-    # Image preprocessing (color conversion, blur)
+
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = cv2.medianBlur(img, 3)
+    _, masked_shape = get_text_and_shape_mask(img)
 
-    # Edge detection (see shape_detection for reference)
-    canny = cv2.Canny(img, 100, 200)
-    kernel = np.ones((2, 2), np.uint8)
-    canny = cv2.dilate(canny, kernel)
-    contours, hierarchy = cv2.findContours(canny, cv2.RETR_CCOMP,
-                                           cv2.CHAIN_APPROX_SIMPLE)
-    contours = np.array(contours, dtype=object)
-    hierarchy = hierarchy[0]
-    final_contours = []
-    levels = np.unique(hierarchy[:, 3])
-    for level in levels[1::]:
+    # Erode mask
+    kernel = np.ones((3, 3), np.uint8)
+    masked_shape = cv2.erode(masked_shape, kernel)
 
-        # get the contours of the current level
-        cnts = contours[hierarchy[:, 3] == level]
+    # Clean up edges with PIL ModeFilter
+    filtered = Image.fromarray(masked_shape)
+    filtered = filtered.filter(ImageFilter.ModeFilter(size=9))
+    masked_shape = np.array(filtered)
 
-        # Add the contour with the largest area to the contour list
-        final_contours.append(max(cnts, key=cv2.contourArea))
-    final_contours = final_contours[::-1]
+    # Fill in the shape
+    cnts, _ = cv2.findContours(masked_shape, cv2.RETR_TREE,
+                               cv2.CHAIN_APPROX_SIMPLE)
+    largest = max(cnts, key=cv2.contourArea)
 
-    # Create image with just the edges
     masked_shape = cv2.drawContours(np.zeros(img.shape[0:2]),
-                                    final_contours, 0, 255, -1)
-    edges = cv2.Canny(np.uint8(masked_shape), 100, 200)
+                                    [largest], 0, 255, -1)
+    hull = cv2.drawContours(np.zeros(img.shape[0:2]),
+                            [cv2.convexHull(largest, False)], 0, 255, -1)
 
-    # Create convex hull and convex hull with images
-    hulls = [cv2.convexHull(c, False) for c in final_contours]
-    h_shape = cv2.drawContours(np.zeros(img.shape[0:2]), hulls, 0, 255, -1)
-    edge_hull = cv2.Canny(np.uint8(h_shape), 100, 200)
+    # Get the shape outline
+    edges = cv2.Canny(np.uint8(masked_shape), 100, 200)
+    edge_hull = cv2.Canny(np.uint8(hull), 100, 200)
 
     util.debug_imwrite(edges,
                        f"./images/debug/img-edges-{time.time()}.png")
@@ -98,8 +94,8 @@ def detect_shape(img):
 
     if M["m00"] == 0:  # No contour exists, so we can't detect anything
         return []
-    cX = int(M["m10"] / M["m00"])
-    cY = int(M["m01"] / M["m00"])
+    cX = round(M["m10"] / M["m00"])
+    cY = round(M["m01"] / M["m00"])
 
     # Convert contour outline to polar form
     dist = [{'count': 0, 'dist': 0} for i in range(granularity + 1)]

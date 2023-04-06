@@ -7,7 +7,9 @@ import json
 import cv2
 import numpy as np
 import redis
+
 from PIL import Image, ImageFilter
+from scipy import interpolate
 
 import util
 from odlc.segmentation import get_text_and_shape_mask
@@ -15,23 +17,6 @@ from odlc.segmentation import get_text_and_shape_mask
 r = redis.Redis(host='redis', port=6379, db=0)
 granularity = int(os.environ.get('POLAR_SHAPE_GRANULARITY'))
 CONVEX_THRESHOLD = float(os.environ.get('CONCAVE_SHAPE_AREA_RATIO_THRESHOLD'))
-
-
-def interpolate(i, dist):
-    j = i
-    while j >= 0 and dist[j]['count'] == 0:
-        j -= 1
-    k = i
-    while k < len(dist) and dist[k]['count'] == 0:
-        k += 1
-
-    if j >= 0 and k < len(dist):
-        return ((i-j) * dist[k]['dist'] / dist[k]['count'] +
-                (k-i) * dist[j]['count'] / dist[j]['count']) / (k-j)
-    elif j >= 0:
-        return dist[j]['count']
-    elif k < len(dist):
-        return dist[k]['count']
 
 
 def confidence_mapping(c):
@@ -57,9 +42,11 @@ def initialize(targets):
 def detect_shape(img):
 
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    _, masked_shape = get_text_and_shape_mask(img)
+    masked_text, masked_shape = get_text_and_shape_mask(img)
 
-    # Erode mask
+    # Add in the text to fill in the inside, then erode
+    masked_shape += masked_text
+
     kernel = np.ones((3, 3), np.uint8)
     masked_shape = cv2.erode(masked_shape, kernel)
 
@@ -123,7 +110,15 @@ def detect_shape(img):
         if entry['count'] != 0:
             data.append(entry['dist'] / entry['count'] / mdist)
         else:
-            data.append(interpolate(i, dist) / mdist)
+            data.append(np.nan)  # placeholder value
+
+    # replace placeholder values
+    t = np.linspace(0, 2 * math.pi, granularity+1)
+    for i in range(len(data)):
+        if np.isnan(data[i]):
+            # interpolate, excluding the current index from the reference data
+            f = interpolate.interp1d(np.delete(t, i), np.delete(data, i))
+            data[i] = f(t[i])
 
     # Duplicate data and truncate last entry to allow for processing as
     # periodic signal

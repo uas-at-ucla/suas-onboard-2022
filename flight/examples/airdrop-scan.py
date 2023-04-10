@@ -11,14 +11,17 @@
 #     # Scan the search area for targets
 #     for lat in np.arange(lat_min, lat_max, 0.0001):
 #         for lon in np.arange(lon_min, lon_max, 0.0001):
-#             # Check if the current location is within the search area boundaries
+#             # Check if the current location is within the search area
+# boundaries
 #             if is_point_inside_polygon(lat, lon, boundary_points):
 #                 # Move the vehicle to the current location
-#                 vehicle.simple_goto(LocationGlobalRelative(lat, lon, altitude))
+#                 vehicle.simple_goto(LocationGlobalRelative(lat, lon,
+# altitude))
 
 #                 # Wait for the vehicle to reach the current location
 #                 while True:
-#                     remaining_distance = get_distance_metres(vehicle.location.global_frame, LocationGlobalRelative(lat, lon, altitude))
+#                     remaining_distance = get_distance_metres(
+# vehicle.location.global_frame, LocationGlobalRelative(lat, lon, altitude))
 #                     if remaining_distance <= 1:
 #                         break
 #                     time.sleep(1)

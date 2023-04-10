@@ -17,7 +17,7 @@ def main(args):
 
     # Connect to the Vehicle
     print('Connecting to vehicle on: %s' % connection_string)
-    vehicle = connect(connection_string, wait_ready=True)
+    vehicle = connect(connection_string, wait_ready=True, timeout=360)
 
     arm(vehicle)
 
@@ -30,6 +30,20 @@ def main(args):
     # Start mission
     print("Starting waypoint mission")
     start_mission(vehicle)
+
+    # mission_not_done = True
+
+    # while mission_not_done:
+    #     pass
+
+    # Start airdrop scan
+    # TODO: do
+
+    # Airdrop
+    # TODO: do
+
+    # Land
+    # TODO: copy from above
 
 
 if __name__ == '__main__':

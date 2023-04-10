@@ -1,8 +1,7 @@
-from __future__ import print_function
 import time
 from dronekit import connect, VehicleMode
-
 import argparse
+
 parser = argparse.ArgumentParser(
     description='Commands vehicle using vehicle.simple_goto.')
 parser.add_argument('--connect',

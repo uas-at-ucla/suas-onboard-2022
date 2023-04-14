@@ -91,8 +91,6 @@ class TesseractTests(unittest.TestCase):
         net = MobilenetWrapper.MobilenetWrapper()
         img = cv2.imread(path)
         det = net.get_matching_text(img)
-        print(result)
-        print(det)
         self.assertEqual(det[0][0], result)
 
 

@@ -23,7 +23,7 @@ class MobilenetWrapper:
             self.net.load_state_dict(torch.load(path, map_location="cpu"))
         else:
             self.net.load_state_dict(torch.load(path))
-        
+
         self.net = self.net.to(self.device)
 
         self.net.eval()

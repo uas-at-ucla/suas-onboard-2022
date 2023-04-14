@@ -13,7 +13,7 @@ NUM_CLASSES = len(POSSIBLE_TEXTS)
 class MobilenetWrapper:
     threshold = 0
 
-    def __init__(self, path="/app/odlc/models/large_mobilent_6.pth"):
+    def __init__(self, path="/app/odlc/models/mobilenet_large.pth"):
         self.net = mobilenet_v3_large()
         self.net.classifier[-1] = torch.nn.Linear(in_features=HIDDEN,
                                                   out_features=NUM_CLASSES,

@@ -16,12 +16,18 @@ MIN_RELATIVE_ALT = 22.86  # 75 feet
 MAX_RELATIVE_ALT = 121.92  # 400 feet
 
 
+# Puts the vehicle into flight_mode.
+def mode_switch(vehicle, flight_mode):
+    while vehicle.mode.name != flight_mode:
+        vehicle.mode = VehicleMode(flight_mode)
+        print("Waiting for mode change to " + flight_mode + " . . .")
+        time.sleep(1)
+    print(flight_mode)
+
+
 # Puts the vehicle into AUTO mode.
 def start_mission(vehicle):
-    while vehicle.mode.name != "AUTO":
-        vehicle.mode = VehicleMode("AUTO")
-        print("Waiting for mode change to AUTO . . .")
-        time.sleep(1)
+    mode_switch(vehicle, "AUTO")
 
 
 def mission_add_takeoff(vehicle):

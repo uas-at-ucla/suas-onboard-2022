@@ -3,6 +3,8 @@ import time
 from dronekit import connect, Command, VehicleMode
 from pymavlink import mavutil
 
+import tkinter as tk
+
 METERS_PER_FEET = 0.3048
 
 ACC_RADIUS = 7.62  # 25 feet
@@ -14,28 +16,34 @@ AIRFIELD_ALT = 43.2816  # Airfield is 142 feet MSL
 MIN_RELATIVE_ALT = 22.86  # 75 feet
 MAX_RELATIVE_ALT = 121.92  # 400 feet
 
+STARTING_POINT = [38.31633, -76.55578]
 TERMINATION_POINT = [38.315339, -76.548108]
 
 # TODO: Use correct connection string for real plane.
-connection_string = "127.0.0.1:14550"
+connection_string = "127.0.0.1:14551"
 vehicle = connect(connection_string, wait_ready=True)
 
 
 # This function is for testing. TODO: REPLACE
 def arm_vehicle():
     print("Vehicle is armable:", vehicle.is_armable)
+    while not vehicle.is_armable:
+        time.sleep(1)
+        print("Waiting for vehicle to become armable . . .")
     while not vehicle.armed:
         vehicle.armed = True
         print("Waiting for vehicle to arm . . .")
         time.sleep(1)
+    print("ARMED")
 
 
-# Puts the vehicle into AUTO mode.
-def start_mission():
-    while vehicle.mode.name != "AUTO":
-        vehicle.mode = VehicleMode("AUTO")
-        print("Waiting for mode change to AUTO . . .")
+# Puts the vehicle into mode.
+def mode_switch(flight_mode):
+    while vehicle.mode.name != flight_mode:
+        vehicle.mode = VehicleMode(flight_mode)
+        print("Waiting for mode change to " + flight_mode + " . . .")
         time.sleep(1)
+    print(flight_mode)
 
 
 def mission_add_takeoff():
@@ -107,13 +115,58 @@ def mission_add_waypoints(waypoint_list):
     cmds.upload()
 
 
-arm_vehicle()
+def press(event):
+    k = event.keysym
+    if k == "BackSpace":
+        print(vehicle.attitude)
+        mode_switch("AUTO")
+    elif k == "Escape":
+        mode_switch("RTL")
+    elif k == "l":
+        cmds.clear()
+        cmds.upload()
+        mission_add_land(STARTING_POINT)
+    elif k == "w":  # Pitch down
+        pass
+        vehicle.channels.overrides["2"] = 0  # TODO
+    elif k == "s":  # Pitch up
+        pass
+    elif k == "a":  # Roll left
+        pass
+    elif k == "d":  # Roll right
+        pass
+    elif k == "r":  # Throttle up
+        pass
+    elif k == "f":  # Throttle down
+        pass
 
+
+def release(event):
+    k = event.keysym
+    if k == "w":
+        pass
+    elif k == "s":
+        pass
+    elif k == "a":
+        pass
+    elif k == "d":
+        pass
+    elif k == "r":
+        pass
+    elif k == "f":
+        pass
+
+
+arm_vehicle()
 cmds = vehicle.commands
+
 cmds.clear()
 cmds.upload()
-
 mission_add_takeoff()
 mission_add_waypoints(generate_waypoint_list("waypoints.txt"))
 mission_add_land(TERMINATION_POINT)
-start_mission()
+
+tk_root = tk.Tk()
+tk_root.bind("<Key>", press)
+tk_root.bind("<KeyRelease>", release)
+tk_root.mainloop()

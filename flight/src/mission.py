@@ -11,7 +11,8 @@ ACC_RADIUS = 7.62  # 25 feet
 CLIMB_ANGLE = 20
 DESCENT_ANGLE = 20
 
-AIRFIELD_ALT = 43.2816  # Airfield is 142 feet MSL
+# AIRFIELD_ALT = 43.2816  # Airfield is 142 feet MSL
+AIRFIELD_ALT = 209 # Apollo airfield
 MIN_RELATIVE_ALT = 22.86  # 75 feet
 MAX_RELATIVE_ALT = 121.92  # 400 feet
 

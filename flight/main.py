@@ -8,12 +8,13 @@ from src.mission import mission_add_takeoff, \
 
 # TODO: move
 WAYPOINT_FILENAME = "waypoints.txt"
-RTL_POINT = [38.315339, -76.548108]
+# RTL_POINT = [38.315339, -76.548108]
+RTL_POINT = [34.17563223420202, -118.48213260580246] # Apollo RTL
 
 
 def main(args):
     connection_string = args.connect
-    waypoint_file = args.waypoint_file
+    waypoint_file = args.waypoint_file if args.waypoint_file else WAYPOINT_FILENAME
 
     # Connect to the Vehicle
     print('Connecting to vehicle on: %s' % connection_string)

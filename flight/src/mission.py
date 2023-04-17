@@ -101,3 +101,23 @@ def mission_add_waypoints(vehicle, waypoint_list):
         )
         cmds.add(waypoint_command)
     cmds.upload()
+
+def mission_add_waypoint(vehicle, waypoint, cmds=None, upload=False):
+    if cmds is None:
+        cmds = vehicle.commands
+        cmds.download()
+        cmds.wait_ready()
+    waypoint_command = Command(
+        0, 0, 0,
+        mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+        mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+        0, 0, 0,
+        ACC_RADIUS,
+        0, 0,
+        waypoint[0],
+        waypoint[1],
+        waypoint[2]
+    )
+    cmds.add(waypoint_command)
+    if upload:
+        cmds.upload()

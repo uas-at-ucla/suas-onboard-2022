@@ -39,7 +39,7 @@ target_locations = [(38.31729702009844,-76.55617670782419),
 
 
 # connect to vehicle
-vehicle = mavutil.mavlink_connection(device="udpin:127.0.0.1:14551")
+vehicle = mavutil.mavlink_connection(device="/dev/ttyACM1")
 
 # wait for a heartbeat
 vehicle.wait_heartbeat()

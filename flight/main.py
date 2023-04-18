@@ -4,6 +4,7 @@ from src.arm import arm
 from src.mission import mission_add_takeoff, \
     generate_waypoint_list, mission_add_waypoints, \
     mission_add_land, start_mission
+from src.fences import 
 from pymavlink import mavutil
 import time
 
@@ -23,13 +24,9 @@ def main(args):
     print('Connecting to vehicle on: %s' % connection_string)
     vehicle = connect(connection_string, wait_ready=True, timeout=360, baud=115200)
 
-    # arm(vehicle)
-
-    while not (vehicle.armed and vehicle.mode.name != "LOITER" and vehicle.altitude < 22.86):
-        time.sleep(1)
-        pass
-
-    print("Starting Autopilot")
+    # Upload fences
+    # set_geofence(vehicle, fence_points)
+    # enable_fence(vehicle)
 
     # Setup waypoint mission
     mission_add_takeoff(vehicle)
@@ -37,6 +34,15 @@ def main(args):
     mission_add_waypoints(vehicle, waypoints)
     mission_add_land(vehicle, RTL_POINT)
     print("Uploaded mission")
+
+
+    # arm(vehicle)
+
+    while not (vehicle.armed and vehicle.mode.name != "LOITER" and vehicle.altitude < 22.86):
+        time.sleep(1)
+        pass
+
+    print("Starting Autopilot")
 
     # Start mission
     # print("Starting waypoint mission")

@@ -4,14 +4,12 @@ PORT=8003
 
 tidy:
 	rm -rf ./vision/images/debug/*.png
-
-update:
+	
+build:
 	wget -O ./vision/odlc/models/alphanumeric_model.pth \
 		https://uas.seas.ucla.edu/model/alphanumeric_model.pth && \
 	wget -O ./vision/odlc/models/emergent_model.pth \
-		https://uas.seas.ucla.edu/model/emergent_model.pth
-
-build:
+		https://uas.seas.ucla.edu/model/emergent_model.pth && \
 	docker compose build
 
 run:
@@ -26,3 +24,9 @@ kill:
 test:
 	docker compose build && docker compose up -d && \
 		docker exec suas-onboard-vision-web-1 python3 -m unittest
+
+coverage:
+	docker compose build && docker compose up -d && \
+		docker exec suas-onboard-vision-web-1 bash -c \
+		"coverage run -m unittest; coverage html -i"
+	

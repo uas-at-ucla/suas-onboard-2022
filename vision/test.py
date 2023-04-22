@@ -65,6 +65,9 @@ class EmergentModelTests(unittest.TestCase):
 
 
 class TesseractTests(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        super(TesseractTests, self).__init__(*args, **kwargs)
+        self.net = MobilenetWrapper.MobilenetWrapper()
     # @parameterized.expand([
     #    ('/app/images/test/tesseract-test1.png', "A"),
     #    ('/app/images/test/tesseract-test2.png', "A"),
@@ -88,9 +91,8 @@ class TesseractTests(unittest.TestCase):
     #    ('/app/images/test/DJI_03.JPG', "U"), FAIL
     #    ('/app/images/test/DJI_04.JPG', "8"), FAIL
     def test_dji_images(self, path, result):
-        net = MobilenetWrapper.MobilenetWrapper()
         img = cv2.imread(path)
-        det = net.get_matching_text(img)
+        det = self.net.get_matching_text(img)
         self.assertEqual(det[0][0], result)
 
 

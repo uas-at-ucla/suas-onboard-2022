@@ -10,7 +10,7 @@ build:
 		https://uas.seas.ucla.edu/model/alphanumeric_model.pth && \
 	wget -O ./vision/odlc/models/emergent_model.pth \
 		https://uas.seas.ucla.edu/model/emergent_model.pth && \
-	wget -O ./vision/odlc/models/mobilenet_large \
+	wget -O ./vision/odlc/models/mobilenet_large.pth \
 		http://uas.seas.ucla.edu/model/mobilent_text.pth && \
 	docker compose build
 

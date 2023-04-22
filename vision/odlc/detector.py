@@ -13,7 +13,8 @@ import redis
 import numpy as np
 
 import util as util
-from odlc import inference, color_detection, gps, tesseract, shape_detection
+from odlc import inference, color_detection, gps, shape_detection
+from odlc import MobilenetWrapper
 
 r = redis.Redis(host='redis', port=6379, db=0)
 tolerance = float(os.environ.get('DETECTION_TOLERANCE'))
@@ -21,6 +22,7 @@ alphanumeric_model = inference.Model('/app/odlc/models/alphanumeric_model.pth')
 emergent_model = inference.Model('/app/odlc/models/emergent_model.pth')
 debugging = (int(os.environ.get('DEBUG')) == 1)
 AP = int(os.environ.get('ALPHANUMERIC_DETECTION_PADDING'))
+net = MobilenetWrapper.MobilenetWrapper()
 
 
 def get_detection_confidence(detection):
@@ -180,7 +182,7 @@ def process_queued_image(img, telemetry):
         fc, bc = util.safe_function_call(color_detection.
                                          get_text_and_shape_color,
                                          ('none', 'none'), crop_img)
-        text = util.safe_function_call(tesseract.get_matching_text, {},
+        text = util.safe_function_call(net.get_matching_text, {},
                                        crop_img)
         shapes = util.safe_function_call(shape_detection.detect_shape, {},
                                          crop_img)

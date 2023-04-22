@@ -22,12 +22,12 @@ def send_status(vehicle, status: str):
     N = len(status)
     if N <= 50:
         message = vehicle.message_factory.statustext_encode(
-            severity=6,
-            text=status,
-            id=0
+            severity=0,
+            text=bytes(status, "utf-8")
         )
         vehicle.send_mavlink(message)
     else:
+        return
         id = (2**16-1) * random.random()
         for i in range(int(N / 50)):
             message = vehicle.message_factory.statustext_encode(

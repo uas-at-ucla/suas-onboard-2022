@@ -57,30 +57,31 @@ def main(args):
     vehicle = connect(connection_string, wait_ready=True,
                       timeout=360, baud=115200)
 
-    send_status("Resetting mission")
+    send_status(vehicle, "Resetting mission")
     mission_reset(vehicle)
 
     # Upload fences
-    fence_points = generate_fence(fence_file)
-    set_geofence(vehicle, fence_points)
-    enable_fence(vehicle)
+    # fence_points = generate_fence(fence_file)
+    # set_geofence(vehicle, fence_points)
+    # enable_fence(vehicle)
 
     # Setup waypoint mission
-    waypoints = generate_waypoint_list(waypoint_file)
-    N = len(waypoint_file)
-    mission_add_waypoints(vehicle, waypoints, add_dummy=True)
-    send_status("Uploaded mission")
+    # waypoints = generate_waypoint_list(waypoint_file)
+    # N = len(waypoint_file)
+    # mission_add_waypoints(vehicle, waypoints, add_dummy=True)
+    # send_status(vehicle, "Uploaded mission")
 
     # Transition to autonomous mode
+    print("Waiting for loiter mode")
     while not (vehicle.armed and vehicle.mode.name != "LOITER" and
                vehicle.altitude >= 22.86):
         time.sleep(0.5)
         pass
 
-    send_status("Starting Autopilot")
+    send_status(vehicle, "Starting Autopilot")
 
     # Start mission
-    send_status("Starting waypoint mission")
+    send_status(vehicle, "Starting waypoint mission")
     start_mission(vehicle)
 
     while vehicle.commands.next != N + 1:

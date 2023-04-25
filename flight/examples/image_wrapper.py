@@ -17,15 +17,6 @@ def get_best_object_detections():
         print("Got object detections")
     return detections
 
-'''
-def queue_image_for_odlc(image_png):
-    while True:
-        response = requests.post(
-            'http://localhost:8003/odlc', data={'image': image_png})
-        if response.status_code == 200:
-            print('Image queued')
-        time.sleep(0.25)
-'''
 
 def queue_image_for_odlc(image_png, stop_event):
     while not stop_event.is_set():

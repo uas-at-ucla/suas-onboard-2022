@@ -12,7 +12,7 @@ CLIMB_ANGLE = 20
 DESCENT_ANGLE = 20
 
 # AIRFIELD_ALT = 43.2816  # Airfield is 142 feet MSL
-AIRFIELD_ALT = 209 # Apollo airfield
+AIRFIELD_ALT = 209  # Apollo airfield
 MIN_RELATIVE_ALT = 22.86  # 75 feet
 MAX_RELATIVE_ALT = 121.92  # 400 feet
 
@@ -29,6 +29,14 @@ def mode_switch(vehicle, flight_mode):
 # Puts the vehicle into AUTO mode.
 def start_mission(vehicle):
     mode_switch(vehicle, "AUTO")
+
+
+def mission_reset(vehicle):
+    cmds = vehicle.commands
+    cmds.download()
+    cmds.wait_ready()
+    cmds.clear()
+    cmds.upload()
 
 
 def mission_add_takeoff(vehicle):
@@ -83,7 +91,7 @@ def generate_waypoint_list(filename):
     return waypoint_list
 
 
-def mission_add_waypoints(vehicle, waypoint_list):
+def mission_add_waypoints(vehicle, waypoint_list, add_dummy=False):
     cmds = vehicle.commands
     cmds.download()
     cmds.wait_ready()
@@ -100,7 +108,20 @@ def mission_add_waypoints(vehicle, waypoint_list):
             waypoint[2]
         )
         cmds.add(waypoint_command)
+    if add_dummy:
+        cmds.add(Command(
+            0, 0, 0,
+            mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+            mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+            0, 0, 0,
+            ACC_RADIUS,
+            0, 0,
+            waypoint_list[-1][0],
+            waypoint_list[-1][1],
+            waypoint_list[-1][2]
+        ))
     cmds.upload()
+
 
 def mission_add_waypoint(vehicle, waypoint, cmds=None, upload=False):
     if cmds is None:

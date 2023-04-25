@@ -1,11 +1,11 @@
-#Test script for image wrapper
+# Test script for image wrapper
 import unittest
-import requests
-import json
-import time
 import threading
 from unittest.mock import patch
-from image_wrapper import (index, get_best_object_detections, queue_image_for_odlc, update_telemetry, update_targets, get_status)
+from image_wrapper import (index, get_best_object_detections,
+                           queue_image_for_odlc, update_telemetry,
+                           update_targets, get_status)
+
 
 class TestImageWrapper(unittest.TestCase):
 
@@ -23,18 +23,16 @@ class TestImageWrapper(unittest.TestCase):
         result = get_best_object_detections()
         self.assertEqual(result, {'key': 'value'})
 
-
     @patch('requests.post')
     def test_queue_image_for_odlc(self, mock_post):
         mock_post.return_value.status_code = 200
         stop_event = threading.Event()
-        thread = threading.Thread(target=queue_image_for_odlc, args=('image_png', stop_event))
+        thread = threading.Thread(target=queue_image_for_odlc,
+                                  args=('image_png', stop_event))
         thread.start()
         stop_event.wait(timeout=2.5)
         stop_event.set()
         thread.join(timeout=0.1)
-        #mock_post.assert_called_once_with(
-        #    'http://localhost:8003/odlc', data={'image': 'image_png'})
         self.assertGreaterEqual(mock_post.call_count, 9)
         print("Test successful")
 
@@ -52,7 +50,9 @@ class TestImageWrapper(unittest.TestCase):
         update_targets('type', 'shape_color', 'text_color', 'text', 'shape')
         mock_post.assert_called_once_with(
             'http://localhost:8003/targets',
-            json={'type': 'type', 'class': {'shape-color': 'shape_color', 'text-color': 'text_color', 'text': 'text', 'shape': 'shape'}})
+            json={'type': 'type', 'class': {'shape-color': 'shape_color',
+                                            'text-color': 'text_color',
+                                            'text': 'text', 'shape': 'shape'}})
 
     @patch('requests.get')
     def test_get_status(self, mock_get):
@@ -60,6 +60,7 @@ class TestImageWrapper(unittest.TestCase):
         mock_get.return_value.json.return_value = {'key': 'value'}
         result = get_status()
         self.assertEqual(result, {'key': 'value'})
-        
+
+
 if __name__ == '__main__':
     unittest.main()

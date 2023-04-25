@@ -1,6 +1,5 @@
 from pymavlink import mavutil
 import pymavlink.dialects.v20.all as dialect
-from types import SimpleNamespace
 
 
 def get_fence_action(vehicle):
@@ -15,13 +14,13 @@ def set_fence_action(vehicle, val):
     vehicle.parameters["FENCE_ACTION"] = val
 
 
-def set_fence_total(vehicle, val:int):
+def set_fence_total(vehicle, val: int):
     vehicle.parameters["FENCE_TOTAL"] = val
 
 
 def create_mission_geofence(vehicle, seq, total, point):
     return vehicle.message_factory.mission_item_int_encode(
-        target_system=0, target_component=0, 
+        target_system=0, target_component=0,
         seq=seq,
         frame=dialect.MAV_FRAME_GLOBAL_RELATIVE_ALT,
         command=dialect.MAV_CMD_NAV_FENCE_POLYGON_VERTEX_INCLUSION,
@@ -44,7 +43,7 @@ def set_geofence(vehicle, points):
     )
     vehicle.send_mavlink(init_message)
     print("Sent MISSION_COUNT")
-    
+
     ready = False
 
     def ack_listener(vehicle, name, msg):
@@ -58,19 +57,21 @@ def set_geofence(vehicle, points):
         print("Received MISSION_REQUEST_INT")
         if msg.mission_type != dialect.MAV_MISSION_TYPE_FENCE:
             return
-        geofence_point = create_mission_geofence(vehicle, msg.seq, len(points), points[msg.seq])
+        geofence_point = create_mission_geofence(
+            vehicle, msg.seq, len(points), points[msg.seq])
         vehicle.send_mavlink(geofence_point)
         print("Sent MISSION_ITEM_INT")
 
     vehicle.add_message_listener("MISSION_ACK", ack_listener)
     vehicle.add_message_listener("MISSION_REQUEST", mission_request_listener)
-    
+
     while not ready:
         pass
 
     print("Done Uploading")
     vehicle.remove_message_listener("MISSION_ACK", ack_listener)
-    vehicle.remove_message_listener("MISSION_REQUEST", mission_request_listener)
+    vehicle.remove_message_listener("MISSION_REQUEST",
+                                    mission_request_listener)
 
 
 def enable_fence(vehicle):
@@ -89,25 +90,34 @@ def enable_fence(vehicle):
     vehicle.send_mavlink(message)
 
 
+def generate_fence(filename):
+    fence_list = []
+    with open(filename) as f:
+        for line in f:
+            waypoint = line.strip().split(",")
+            fence_list.append([float(coord) for coord in waypoint])
+    return fence_list
+
+
 if __name__ == "__main__":
     from dronekit import connect
 
     # create mission item list
-    target_locations = [(38.31729702009844,-76.55617670782419),
-                        (38.31594832826572,-76.55657341657302),
-                        (38.31546739500083,-76.55376201277696),
-                        (38.31470980862425,-76.54936361414539),
-                        (38.31424154692598,-76.54662761646904),
-                        (38.31369801280048,-76.54342380058223),
-                        (38.31331079191371,-76.54109648475954),
-                        (38.31529941346197,-76.54052104837133),
-                        (38.31587643291039,-76.54361305817427),
-                        (38.31861642463319,-76.54538594175376),
-                        (38.31862683616554,-76.55206138505936),
-                        (38.31703471119464,-76.55244787859773),
-                        (38.31674255749409,-76.55294546866578),
-                        (38.31729702009844,-76.55617670782419)]
-    
+    target_locations = [(38.31729702009844, -76.55617670782419),
+                        (38.31594832826572, -76.55657341657302),
+                        (38.31546739500083, -76.55376201277696),
+                        (38.31470980862425, -76.54936361414539),
+                        (38.31424154692598, -76.54662761646904),
+                        (38.31369801280048, -76.54342380058223),
+                        (38.31331079191371, -76.54109648475954),
+                        (38.31529941346197, -76.54052104837133),
+                        (38.31587643291039, -76.54361305817427),
+                        (38.31861642463319, -76.54538594175376),
+                        (38.31862683616554, -76.55206138505936),
+                        (38.31703471119464, -76.55244787859773),
+                        (38.31674255749409, -76.55294546866578),
+                        (38.31729702009844, -76.55617670782419)]
+
     vehicle = connect("/dev/ttyACM1", baud=115200, wait_ready=True)
     print("Connected to vehicle")
 

@@ -20,6 +20,7 @@ tolerance = float(os.environ.get('DETECTION_TOLERANCE'))
 alphanumeric_model = inference.Model('/app/odlc/models/alphanumeric_model.pth')
 emergent_model = inference.Model('/app/odlc/models/emergent_model.pth')
 debugging = (int(os.environ.get('DEBUG')) == 1)
+profiling = (int(os.environ.get('PROFILE')) == 1)
 AP = int(os.environ.get('ALPHANUMERIC_DETECTION_PADDING'))
 
 
@@ -267,6 +268,7 @@ def process_queued_image(img, telemetry):
 
 
 def get_top_detections():
+    time_now = time.time()
     """
     Returns the top N detections we are most confident in
     """
@@ -317,4 +319,12 @@ def get_top_detections():
     if debugging:
         util.info(ret)
 
-    return ret
+    if profiling:
+        return {
+            'detections': ret,
+            'profile': {
+                "time_ms": (time.time() - time_now) * 1000,
+            },
+        }
+    else:
+        return ret

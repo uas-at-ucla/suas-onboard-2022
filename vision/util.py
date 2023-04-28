@@ -29,7 +29,7 @@ def debug_imwrite(img, path):
 
 def safe_function_call(func, default, *args):
     try:
-        return func(*args)
+        return func(*args),
     except Exception:  # pylint: disable=broad-except
         traceback.print_exc()
         return default

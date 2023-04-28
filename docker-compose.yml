@@ -3,6 +3,7 @@ services:
   vision-web:
     build: vision
     environment:
+      - PROFILE=1
       - DEBUG=1
       - DETECTION_TOLERANCE=15
       - DILATION_ITERATIONS=2

@@ -33,6 +33,7 @@ class PixCam:
         # images
         self.set_flag("--filename", r"'{0}{1}%Y-%m-%d--%H-%M-%S.%C'"
                       .format(working_dir, os.path.sep))
+        self.set_flag("--force-overwrite", "")
 
         # Crude check that gphoto2 is installed
         try:

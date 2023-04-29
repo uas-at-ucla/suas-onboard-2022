@@ -7,10 +7,11 @@ from datetime import datetime
 from GPSPhoto import gpsphoto
 import geopy
 import geopy.distance
+import signal
+import psutil
 # from PIL import Image
 # from PIL.ExifTags import TAGS, GPSTAGS
 # from exif import Image
-
 # Uncomment following line to redirect all logging to STDOUT
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 log = logging.getLogger(__name__)
@@ -54,7 +55,7 @@ class PixCam:
     def take_pic(self):
         log.info("Taking a picture")
         output = self.execute_cmd("--capture-image-and-download")
-        if output is None:
+        if output == None:
             return None, None
         log.info("Output: %s", output)
         image_path = re.search("Saving file as (.*?)[\n]", output).group(1)
@@ -67,10 +68,18 @@ class PixCam:
         try:
             command_str = ' '.join(self.args + [cmd])
             log.info("Executing command: %s", command_str)
-            return subprocess.check_output(command_str, shell=True) \
-                .decode("ascii")
-        except subprocess.CalledProcessError as e:
-            log.error("Command failed: %s", e)
+            p = subprocess.Popen([command_str], shell=True, stdout=subprocess.PIPE)
+            out, _ = p.communicate(timeout=5)
+            if p.returncode == 0:
+                return out.decode("ascii")
+            else:
+                return None
+        except subprocess.TimeoutExpired as e:
+            log.error("Command timed out: %s", e)
+            current_process = psutil.Process()
+            children = current_process.children(recursive=True)
+            for child in children:
+                os.kill(child.pid, signal.SIGKILL)
             return None
 
     # Takes a picture and embeds crude gps data into metadata
@@ -79,6 +88,9 @@ class PixCam:
     # Ex. 45, -40, 400
     def take_pic_and_record_loc(self, lat, long, alt=0):
         image_path, image_name = self.take_pic()
+
+        if image_path == None:
+            return None, None
 
         # with open(image_path, "rb") as image_file:
         #     image = Image(image_file)
@@ -140,6 +152,10 @@ class PixCam:
         # Find how much time passes between GPS reading and picture snap
         init_time_sec = float(datetime.now().timestamp())
         image_path, image_name = self.take_pic()
+
+        if image_path == None:
+            return None, None
+
         timestamp_datetime = self.get_datetime_from_img_name(image_name)
         timestamp = self.get_exif_date_from_datetime(timestamp_datetime)
         final_time_sec = float(timestamp_datetime.timestamp())
@@ -198,11 +214,10 @@ class PixCam:
     def __del__(self):
         pass
 
+    def take_picture(self):
+        res1, _ = self.take_pic_and_adjust_loc(34.068458, -118.442819, 40, 0)
+        return res1
 
 if __name__ == "__main__":
     print("Initiating testing protocol")
-    cam = PixCam("/home/uasucla/Pictures/gphoto_pics")
-    res1, res2 = cam.take_pic_and_adjust_loc(34.068458, -118.442819, 40, 0)
-    print(res1)
-    print(res2)
-    print(os.path.isfile(res1))
+

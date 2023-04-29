@@ -1,0 +1,14 @@
+[
+    {
+        "type": "emergent"
+    },
+    {
+        "type": "alphanumeric",
+        "class": {
+            "shape-color": "blue",
+            "text-color": "white",
+            "text": "A",
+            "shape": "circle"
+        }
+    }
+]

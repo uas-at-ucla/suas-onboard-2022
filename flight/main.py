@@ -5,9 +5,13 @@ from src.mission import \
     start_mission, mission_reset, \
     mode_switch
 from src.fences import set_geofence, enable_fence, generate_fence
+from src.pixcam import PixCam
+import src.image_wrapper as iw
 import random
 import time
-
+import os
+import shutil
+import multiprocessing
 
 # TODO: move
 WAYPOINT_FILENAME = "waypoints.txt"
@@ -17,6 +21,7 @@ RTL_POINT = [34.17563223420202, -118.48213260580246]  # Apollo RTL
 
 # MANUAL_MODES = ["MANUAL", "FBWA"]
 
+OUTPUT_IMAGE_FOLDER_RELATIVE = './img'
 
 def send_status(vehicle, status: str):
     N = len(status)
@@ -47,6 +52,13 @@ def send_status(vehicle, status: str):
 
 
 def main(args):
+
+    # Initialize vision subsystem, camera first, then post targets
+    if os.path.exists(os.path.join(os.getcwd(), OUTPUT_IMAGE_FOLDER_RELATIVE)):
+        shutil.rmtree(os.path.join(os.getcwd(), OUTPUT_IMAGE_FOLDER_RELATIVE))
+    os.makedirs(os.path.join(os.getcwd(), OUTPUT_IMAGE_FOLDER_RELATIVE), exist_ok=True)
+    cam = PixCam(os.path.join(os.getcwd(), OUTPUT_IMAGE_FOLDER_RELATIVE))
+
     connection_string = args.connect
     waypoint_file = args.waypoint_file if args.waypoint_file \
         else WAYPOINT_FILENAME
@@ -90,6 +102,18 @@ def main(args):
 
     # Start airdrop scan
     # TODO: do
+    # CRITICAL: MUST POST TELEMETRY BEFORE QUEUEING IMAGES
+
+    # Start image detection
+    proc = multiprocessing.Process(target = iw.update_images, args=(cam, ))
+    proc.start()
+
+    # End airdrop scan
+
+
+    # End image detection
+    proc.terminate()
+    best_detections = iw.get_best_object_detections()
 
     # Airdrop
     # TODO: do

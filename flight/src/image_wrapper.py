@@ -1,6 +1,8 @@
 import requests
+import json
 import time
-
+import os
+import multiprocessing
 
 def index():
     response = requests.get('http://localhost:8003/index')
@@ -18,14 +20,13 @@ def get_best_object_detections():
     return detections
 
 
-def queue_image_for_odlc(image_png, stop_event):
-    while not stop_event.is_set():
-        response = requests.post(
-            'http://localhost:8003/odlc', data={'image': image_png})
-        if response.status_code == 200:
-            print('Image queued')
-        time.sleep(0.25)
-
+def queue_image_for_odlc(data):
+    response = requests.post("http://localhost:8003/odlc",
+                             data=data,
+                             headers={'Content-Type':
+                                      'application/octet-stream'})
+    if response.status_code == 200:
+        print('Image queued')
 
 def update_telemetry(altitude, latitude, longitude, heading):
     response = requests.post('http://localhost:8003/telemetry',
@@ -35,13 +36,11 @@ def update_telemetry(altitude, latitude, longitude, heading):
         print("Telemetry updated")
 
 
-def update_targets(type, shape_color, text_color, text, shape):
+def update_targets(root_dir):
+    with open(os.path.join(root_dir, 'targets.json'), 'r') as tjf:
+        target_json = json.loads(tjf.read())
     response = requests.post('http://localhost:8003/targets',
-                             json={'type': type,
-                                   'class': {'shape-color': shape_color,
-                                             'text-color': text_color,
-                                             'text': text,
-                                             'shape': shape}})
+                             json=target_json)
     if response.status_code == 200:
         print("Targets updated")
 
@@ -52,3 +51,12 @@ def get_status():
         status = response.json()
         print("Got status")
     return status
+
+def update_images(cam):
+    while True:
+        fp = cam.take_picture()
+        if fp != None:
+            with open(fp, 'rb') as im:
+                data = im.read()
+                queue_image_for_odlc(data)
+            os.remove(fp)

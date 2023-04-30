@@ -8,12 +8,10 @@ def get_fence_action(vehicle):
     return vehicle.parameters["FENCE_ACTION"]
 
 
-def reset_fence_action(vehicle):
-    vehicle.parameters["FENCE_ACTION"] = dialect.FENCE_ACTION_NONE
-
-
 def set_fence_action(vehicle, val):
-    vehicle.parameters["FENCE_ACTION"] = val
+    while vehicle.parameters["FENCE_ACTION"] != val:
+        vehicle.parameters["FENCE_ACTION"] = val
+        time.sleep(0.1)
 
 
 def set_fence_total(vehicle, val: int):
@@ -39,6 +37,8 @@ def create_mission_geofence(vehicle, seq, total, point):
 
 @retry(5)
 def set_geofence(vehicle, points):
+    curr_fence_action = get_fence_action(vehicle)
+    set_fence_action(vehicle, dialect.FENCE_ACTION_NONE)
     set_fence_total(vehicle, len(points))
     count = len(points)
     init_message = vehicle.message_factory.mission_count_encode(
@@ -73,6 +73,8 @@ def set_geofence(vehicle, points):
 
     while not ready:
         pass
+    
+    set_fence_action(vehicle, curr_fence_action)
 
     print("Done Uploading")
     vehicle.remove_message_listener("MISSION_ACK", ack_listener)

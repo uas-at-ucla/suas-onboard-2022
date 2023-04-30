@@ -50,11 +50,13 @@ def main(args):
     mission_reset(vehicle)
 
     # Upload fences
+    print("Uploading fences")
     fence_points = generate_fence(fence_file)
     set_geofence(vehicle, fence_points)
     enable_fence(vehicle)
 
     # Setup waypoint mission
+    print("Uploading waypoint")
     waypoints = generate_waypoint_list(waypoint_file)
     N = len(waypoint_file)
     mission_add_waypoints(vehicle, waypoints, add_dummy=True)
@@ -117,5 +119,5 @@ if __name__ == '__main__':
 
     try:
         main(args)
-    except RetryException as e:
-        traceback.print_stack(e)
+    except RetryException:
+        traceback.print_exc()

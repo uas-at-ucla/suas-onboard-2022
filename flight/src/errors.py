@@ -20,8 +20,8 @@ def retry(attempts):
         for _ in range(attempts):
             try:
                 return func(*fargs, **fkwargs)
-            except Exception as e:
-                traceback.print_stack(e)
+            except Exception:
+                traceback.print_exc()
                 time.sleep(0.5)
         raise RetryException(f"Failed after retry {attempts} times")
     return do
@@ -35,6 +35,7 @@ class RetryException(Exception):
 if __name__ == "__main__":
     @retry(5)
     def test():
+        raise Exception()
         print("TEST")
 
     test()

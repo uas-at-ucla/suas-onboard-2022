@@ -12,6 +12,8 @@ import time
 import os
 import shutil
 import multiprocessing
+import traceback
+from src.errors import RetryException
 
 # TODO: move
 WAYPOINT_FILENAME = "waypoints.txt"
@@ -22,33 +24,6 @@ RTL_POINT = [34.17563223420202, -118.48213260580246]  # Apollo RTL
 # MANUAL_MODES = ["MANUAL", "FBWA"]
 
 OUTPUT_IMAGE_FOLDER_RELATIVE = './img'
-
-def send_status(vehicle, status: str):
-    N = len(status)
-    if N <= 50:
-        message = vehicle.message_factory.statustext_encode(
-            severity=0,
-            text=bytes(status, "utf-8")
-        )
-        vehicle.send_mavlink(message)
-    else:
-        return
-        id = (2**16-1) * random.random()
-        for i in range(int(N / 50)):
-            message = vehicle.message_factory.statustext_encode(
-                severity=6,
-                text=status[i*50: i*50+50],
-                id=id,
-                chunk_seq=i
-            )
-            vehicle.send_mavlink(message)
-        message = vehicle.message_factory.statustext_encode(
-            severity=6,
-            text=status[i*50:],
-            id=id,
-        )
-        vehicle.send_mavlink(message)
-    print(status)
 
 
 def main(args):
@@ -67,20 +42,20 @@ def main(args):
     # Connect to the Vehicle
     print('Connecting to vehicle on: %s' % connection_string)
     vehicle = connect(connection_string, wait_ready=True,
-                      timeout=360, baud=115200)
+                      timeout=3600, baud=115200)
 
-    send_status(vehicle, "Resetting mission")
+    # send_status(vehicle, "Resetting mission")
     mission_reset(vehicle)
 
     # Upload fences
-    # fence_points = generate_fence(fence_file)
-    # set_geofence(vehicle, fence_points)
-    # enable_fence(vehicle)
+    fence_points = generate_fence(fence_file)
+    set_geofence(vehicle, fence_points)
+    enable_fence(vehicle)
 
     # Setup waypoint mission
-    # waypoints = generate_waypoint_list(waypoint_file)
-    # N = len(waypoint_file)
-    # mission_add_waypoints(vehicle, waypoints, add_dummy=True)
+    waypoints = generate_waypoint_list(waypoint_file)
+    N = len(waypoint_file)
+    mission_add_waypoints(vehicle, waypoints, add_dummy=True)
     # send_status(vehicle, "Uploaded mission")
 
     # Transition to autonomous mode
@@ -90,10 +65,10 @@ def main(args):
         time.sleep(0.5)
         pass
 
-    send_status(vehicle, "Starting Autopilot")
+    # send_status(vehicle, "Starting Autopilot")
 
     # Start mission
-    send_status(vehicle, "Starting waypoint mission")
+    # send_status(vehicle, "Starting waypoint mission")
     start_mission(vehicle)
 
     while vehicle.commands.next != N + 1:
@@ -135,4 +110,8 @@ if __name__ == '__main__':
                         help="File name of the waypoints to be flown through.")
     args = parser.parse_args()
 
-    main(args)
+
+    try:
+        main(args)
+    except RetryException:
+        traceback.print_stack()

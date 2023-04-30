@@ -1,5 +1,7 @@
 from pymavlink import mavutil
 import pymavlink.dialects.v20.all as dialect
+from errors import retry
+import time
 
 
 def get_fence_action(vehicle):
@@ -15,7 +17,9 @@ def set_fence_action(vehicle, val):
 
 
 def set_fence_total(vehicle, val: int):
-    vehicle.parameters["FENCE_TOTAL"] = val
+    while vehicle.parameters["FENCE_TOTAL"] != val:
+        vehicle.parameters["FENCE_TOTAL"] = val
+        time.sleep(0.1)
 
 
 def create_mission_geofence(vehicle, seq, total, point):
@@ -33,6 +37,7 @@ def create_mission_geofence(vehicle, seq, total, point):
     )
 
 
+@retry(5)
 def set_geofence(vehicle, points):
     set_fence_total(vehicle, len(points))
     count = len(points)
@@ -46,6 +51,7 @@ def set_geofence(vehicle, points):
 
     ready = False
 
+    # TODO: add timeouts
     def ack_listener(vehicle, name, msg):
         print("Received MISSION_ACK")
         if msg.mission_type != dialect.MAV_MISSION_TYPE_FENCE:
@@ -74,6 +80,7 @@ def set_geofence(vehicle, points):
                                     mission_request_listener)
 
 
+@retry(5)
 def enable_fence(vehicle):
     message = vehicle.mission_factory.command_long_encode(
         target_system=0, target_component=0,
@@ -88,6 +95,7 @@ def enable_fence(vehicle):
         param7=0
     )
     vehicle.send_mavlink(message)
+    # TODO: add timeouts
 
 
 def generate_fence(filename):

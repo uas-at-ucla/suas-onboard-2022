@@ -3,6 +3,8 @@ import time
 from dronekit import Command, VehicleMode
 from pymavlink import mavutil
 
+from errors import retry
+
 # TODO: move constants
 METERS_PER_FEET = 0.3048
 
@@ -18,6 +20,7 @@ MAX_RELATIVE_ALT = 121.92  # 400 feet
 
 
 # Puts the vehicle into flight_mode.
+@retry(5)
 def mode_switch(vehicle, flight_mode):
     while vehicle.mode.name != flight_mode:
         vehicle.mode = VehicleMode(flight_mode)
@@ -31,15 +34,17 @@ def start_mission(vehicle):
     mode_switch(vehicle, "AUTO")
 
 
-def mission_reset(vehicle):
+@retry(5)
+def mission_reset(vehicle, timeout=30):
     cmds = vehicle.commands
     cmds.download()
     cmds.wait_ready()
     cmds.clear()
-    cmds.upload()
+    cmds.upload(timeout=timeout)
 
 
-def mission_add_takeoff(vehicle):
+@retry(5)
+def mission_add_takeoff(vehicle, timeout=30):
     cmds = vehicle.commands
     cmds.download()
     cmds.wait_ready()
@@ -53,10 +58,11 @@ def mission_add_takeoff(vehicle):
         MIN_RELATIVE_ALT
     )
     cmds.add(takeoff_command)
-    cmds.upload()
+    cmds.upload(timeout=timeout)
 
 
-def mission_add_land(vehicle, landing_point):
+@retry(5)
+def mission_add_land(vehicle, landing_point, timeout=30):
     cmds = vehicle.commands
     cmds.download()
     cmds.wait_ready()
@@ -71,7 +77,7 @@ def mission_add_land(vehicle, landing_point):
         0
     )
     cmds.add(land_command)
-    cmds.upload()
+    cmds.upload(timeout=timeout)
 
 
 # Generate waypoints from waypoints given during competition.
@@ -91,7 +97,8 @@ def generate_waypoint_list(filename):
     return waypoint_list
 
 
-def mission_add_waypoints(vehicle, waypoint_list, add_dummy=False):
+@retry(5)
+def mission_add_waypoints(vehicle, waypoint_list, add_dummy=False, timeout=30):
     cmds = vehicle.commands
     cmds.download()
     cmds.wait_ready()
@@ -120,10 +127,11 @@ def mission_add_waypoints(vehicle, waypoint_list, add_dummy=False):
             waypoint_list[-1][1],
             waypoint_list[-1][2]
         ))
-    cmds.upload()
+    cmds.upload(timeout=timeout)
 
 
-def mission_add_waypoint(vehicle, waypoint, cmds=None, upload=False):
+@retry(5)
+def mission_add_waypoint(vehicle, waypoint, cmds=None, upload=False, timeout=30):
     if cmds is None:
         cmds = vehicle.commands
         cmds.download()
@@ -141,4 +149,4 @@ def mission_add_waypoint(vehicle, waypoint, cmds=None, upload=False):
     )
     cmds.add(waypoint_command)
     if upload:
-        cmds.upload()
+        cmds.upload(timeout=timeout)

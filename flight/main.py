@@ -117,5 +117,5 @@ if __name__ == '__main__':
 
     try:
         main(args)
-    except RetryException:
-        traceback.print_stack()
+    except RetryException as e:
+        traceback.print_stack(e)

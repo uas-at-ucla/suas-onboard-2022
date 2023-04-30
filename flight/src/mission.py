@@ -3,7 +3,7 @@ import time
 from dronekit import Command, VehicleMode
 from pymavlink import mavutil
 
-from errors import retry
+from src.errors import retry
 
 # TODO: move constants
 METERS_PER_FEET = 0.3048

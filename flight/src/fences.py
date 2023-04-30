@@ -82,7 +82,7 @@ def set_geofence(vehicle, points):
 
 @retry(5)
 def enable_fence(vehicle):
-    message = vehicle.mission_factory.command_long_encode(
+    message = vehicle.message_factory.command_long_encode(
         target_system=0, target_component=0,
         command=mavutil.mavlink.MAV_CMD_DO_FENCE_ENABLE,
         confirmation=0,

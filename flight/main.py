@@ -27,6 +27,8 @@ OUTPUT_IMAGE_FOLDER_RELATIVE = './img'
 
 
 def main(args):
+    
+    print("Running flight software")
 
     # Initialize vision subsystem, camera first, then post targets
     if os.path.exists(os.path.join(os.getcwd(), OUTPUT_IMAGE_FOLDER_RELATIVE)):
@@ -95,6 +97,8 @@ def main(args):
 
     # Switch to manual
     mode_switch(vehicle, "LOITER")
+    
+    print("Finished flight software")
 
 
 if __name__ == '__main__':

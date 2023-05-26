@@ -1,24 +1,45 @@
 pipeline {
 	agent any
 	
-	stages {
-		stage('Check Formatting') {
-			steps {
-				catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-		        	sh "flake8 ./"
-		        }
-			}
-		}
+	stages {	
 		stage('Build') { 
 			steps {
 				sh "make build" 
 			}
 		}
-
+		
 		stage('Test') {
 			steps {
-				sh 'make test'
+				sh "flake8 ./ --output-file=flake8.log --exit-zero"
+				sh 'make coverage'
+			}
+			post {
+				always {
+					recordIssues(tool:flake8(pattern: 'flake8.log'))
+					cobertura coberturaReportFile: 'coverage.xml'
+				}
 			}
 		}
 	}
+	
+	post {
+		// clean up unused docker images and containers
+		always {
+			sh 'docker image prune -f'
+			sh 'docker container prune -f'
+		}
+	
+		// send an email if it failed
+        failure {       
+            emailext subject: '$DEFAULT_SUBJECT',
+                body: '$DEFAULT_CONTENT',
+                recipientProviders: [
+                    [$class: 'CulpritsRecipientProvider'],
+                    [$class: 'DevelopersRecipientProvider'],
+                    [$class: 'RequesterRecipientProvider']
+                ], 
+                replyTo: '$DEFAULT_REPLYTO',
+                to: '$DEFAULT_RECIPIENTS'
+        }
+    }
 }

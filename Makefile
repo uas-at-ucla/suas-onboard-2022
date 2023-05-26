@@ -30,5 +30,5 @@ test:
 coverage:
 	docker compose build && docker compose up -d && \
 		docker exec suas-onboard-vision-web-1 bash -c \
-		"coverage run -m unittest; coverage html -i"
+		"coverage run -m unittest; coverage xml -i -o ../coverage.xml"
 	

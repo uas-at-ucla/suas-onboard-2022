@@ -12,4 +12,4 @@ RUN python -m pip install detectron2 -f \
 # RUN python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
 COPY . /app
 WORKDIR /app
-ENTRYPOINT ["./start_gunicorn.sh"]
+CMD ["./start_gunicorn.sh"]

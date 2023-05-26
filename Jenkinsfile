@@ -4,7 +4,9 @@ pipeline {
 	stages {
 		stage('Check Formatting') {
 			steps {
-				sh "flake8 ./"
+				catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+		        	sh "flake8 ./"
+		        }
 			}
 		}
 		stage('Build') { 

@@ -16,7 +16,7 @@ pipeline {
 			post {
 				always {
 					recordIssues(tool:flake8(pattern: 'flake8.log'))
-					cobertura coberturaReportFile: 'coverage.xml'
+					cobertura coberturaReportFile: './vision/coverage.xml'
 				}
 			}
 		}
